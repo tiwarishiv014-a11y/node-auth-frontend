@@ -225,7 +225,150 @@
 .success-title  { font-size: 20px; font-weight: 700; color: #1a1a2e; }
 .success-sub    { font-size: 14px; color: #6c757d; }
 
+/* ============================================================
+   SECTION 7 — REGISTER PAGE
+   ============================================================ */
 
+.register-page {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.register-overlay {
+    display: flex;
+    width: 100%;
+    max-width: 900px;
+    min-height: 580px;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+}
+
+/* ── Left Panel ──────────────────────────────────────────── */
+.register-left {
+    flex: 1;
+    background: linear-gradient(135deg, #7c6af7, #c084fc);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+}
+
+.brand-content h1 {
+    font-size: 28px;
+    font-weight: 800;
+    color: #ffffff;
+    margin-bottom: 16px;
+    line-height: 1.3;
+}
+
+.brand-content p {
+    font-size: 15px;
+    color: rgba(255,255,255,0.85);
+    line-height: 1.7;
+}
+
+/* ── Right Panel ─────────────────────────────────────────── */
+.register-right {
+    flex: 1;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    overflow-y: auto;
+}
+
+.register-card {
+    width: 100%;
+    max-width: 380px;
+}
+
+.register-card h2 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin-bottom: 6px;
+}
+
+.register-card .subtitle {
+    font-size: 14px;
+    color: #6c757d;
+    margin-bottom: 24px;
+}
+
+/* ── Inputs ──────────────────────────────────────────────── */
+.register-card .form-control,
+.register-card .form-select {
+    border-radius: 10px;
+    border: 1.5px solid #dee2e6;
+    padding: 11px 14px;
+    font-size: 14px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.register-card .form-control:focus,
+.register-card .form-select:focus {
+    border-color: #7c6af7;
+    box-shadow: 0 0 0 3px rgba(124,106,247,0.12);
+    outline: none;
+}
+
+/* ── Button ──────────────────────────────────────────────── */
+.register-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #7c6af7, #c084fc);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-weight: 600;
+    font-size: 15px;
+    padding: 12px;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+}
+
+.register-btn:hover:not(:disabled) {
+    opacity: 0.92;
+    transform: translateY(-1px);
+}
+
+.register-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ── Alerts ──────────────────────────────────────────────── */
+.register-card .alert {
+    border-radius: 10px;
+    font-size: 13px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    border: none;
+}
+
+.register-card .alert-success {
+    background: #f0fff4;
+    color: #198754;
+    border-left: 3px solid #198754;
+}
+
+.register-card .alert-danger {
+    background: #fff0f0;
+    color: #dc3545;
+    border-left: 3px solid #dc3545;
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .register-left  { display: none; }
+    .register-right { padding: 30px 20px; }
+    .register-overlay { max-width: 440px; }
+}
 /* ============================================================
    SECTION 2 — PROFILE PAGE
    ============================================================ */
