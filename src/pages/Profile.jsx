@@ -114,9 +114,11 @@ function Profile() {
                                     <div className="avatar-wrap">
                                         {user.profilePicture ? (
                                             <img
-                                                src={`http://localhost:3000/${user.profilePicture}`}
+                                                // src={`http://localhost:3000/${user.profilePicture}`}
+                                                src={`${import.meta.env.VITE_API_URL}/${user.profilePicture}`}
                                                 alt="Profile"
                                                 className="avatar-img"
+                                                onError={(e) => { e.target.style.display='none'; }}
                                             />
                                         ) : (
                                             <div className="avatar-placeholder">
