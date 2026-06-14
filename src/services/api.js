@@ -1,4 +1,5 @@
-const API = 'http://localhost:3000/api';
+// const API = 'http://localhost:3000/api';
+const API = `${import.meta.env.VITE_API_URL}/api`;
 
 export const registerUser = async (formData) => {
     const res  = await fetch(`${API}/register`, {
@@ -106,7 +107,7 @@ export const uploadPicture = async (file, token) => {
 
 // ── Sarvam Chat APIs ─────────────────────────────────────────
 export const sendChatMessage = async (message, language, token, chatId = null) => {
-    const res = await fetch(`http://localhost:3000/api/chat`, {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/chat`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body:    JSON.stringify({ message, language, chatId }),
@@ -115,21 +116,21 @@ export const sendChatMessage = async (message, language, token, chatId = null) =
 };
 
 export const getChatSessions = async (token) => {
-    const res = await fetch(`http://localhost:3000/api/chat/sessions`, {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/chat/sessions`, {
         headers: { Authorization: `Bearer ${token}` },
     });
     return res.json();
 };
 
 export const getChatSession = async (chatId, token) => {
-    const res = await fetch(`http://localhost:3000/api/chat/${chatId}`, {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/chat/${chatId}`, {
         headers: { Authorization: `Bearer ${token}` },
     });
     return res.json();
 };
 
 export const deleteChatSession = async (chatId, token) => {
-    const res = await fetch(`http://localhost:3000/api/chat/${chatId}`, {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/chat/${chatId}`, {
         method:  'DELETE',
         headers: { Authorization: `Bearer ${token}` },
     });
@@ -137,7 +138,7 @@ export const deleteChatSession = async (chatId, token) => {
 };
 
 export const clearAllChats = async (token) => {
-    const res = await fetch(`http://localhost:3000/api/chat/clear/all`, {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/chat/clear/all`, {
         method:  'DELETE',
         headers: { Authorization: `Bearer ${token}` },
     });
@@ -148,7 +149,7 @@ export const transcribeAudio = async (audioBlob, language, token) => {
     const formData = new FormData();
     formData.append('audio', audioBlob, 'audio.webm');
     formData.append('language', language);
-    const res = await fetch('http://localhost:3000/api/voice/transcribe', {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/voice/transcribe`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -158,7 +159,7 @@ export const transcribeAudio = async (audioBlob, language, token) => {
  
 // Send text → get base64 audio back
 export const speakText = async (text, language, token) => {
-    const res = await fetch('http://localhost:3000/api/voice/speak', {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/voice/speak`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body:    JSON.stringify({ text, language }),
