@@ -5,6 +5,8 @@ import {
     sendChatMessage, getChatSessions, getChatSession,
     deleteChatSession, clearAllChats, transcribeAudio, speakText,
 } from '../services/api';
+// import './Chat.css';
+import ReactMarkdown from 'react-markdown';
 
 const LANGUAGES = [
     { code: 'en-IN', label: '🇮🇳 English' },
@@ -29,7 +31,7 @@ function getTime() {
 }
 
 function timeAgo(dateStr) {
-    const diff = Date.now() - new Date(dateStr).getTime();
+    const diff  = Date.now() - new Date(dateStr).getTime();
     const mins  = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days  = Math.floor(diff / 86400000);
@@ -49,7 +51,6 @@ export default function Chat() {
     const [sessionsLoading, setSessionsLoading] = useState(true);
     const [error, setError]                     = useState('');
     const [showSidebar, setShowSidebar]         = useState(true);
-    // Voice states
     const [recording, setRecording]             = useState(false);
     const [transcribing, setTranscribing]       = useState(false);
     const [speaking, setSpeaking]               = useState(false);
@@ -67,15 +68,8 @@ export default function Chat() {
     const backRoute = userRole === 'admin' ? '/dashboard' : '/profile';
 
     useEffect(() => { if (!token) navigate('/login'); }, [token, navigate]);
-
-    useEffect(() => {
-        if (!token) return;
-        loadSessions();
-    }, [token]);
-
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages, loading]);
+    useEffect(() => { if (token) loadSessions(); }, [token]);
+    useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, loading]);
 
     const loadSessions = async () => {
         setSessionsLoading(true);
@@ -87,11 +81,7 @@ export default function Chat() {
         }
     };
 
-    const startNewChat = () => {
-        setActiveChatId(null);
-        setMessages([]);
-        setError('');
-    };
+    const startNewChat = () => { setActiveChatId(null); setMessages([]); setError(''); };
 
     const openSession = async (chatId) => {
         if (chatId === activeChatId) return;
@@ -99,9 +89,7 @@ export default function Chat() {
         const data = await getChatSession(chatId, token);
         if (data.success) {
             setActiveChatId(chatId);
-            setMessages(data.chat.messages.map((m) => ({
-                role: m.role, text: m.content, time: getTime(),
-            })));
+            setMessages(data.chat.messages.map((m) => ({ role: m.role, text: m.content, time: getTime() })));
         }
     };
 
@@ -123,251 +111,230 @@ export default function Chat() {
     const handleSend = async (text) => {
         const msg = (text || input).trim();
         if (!msg || loading) return;
-
-        setInput('');
-        setError('');
+        setInput(''); setError('');
         setMessages((prev) => [...prev, { role: 'user', text: msg, time: getTime() }]);
         setLoading(true);
-
         const data = await sendChatMessage(msg, language, token, activeChatId);
         setLoading(false);
-
         if (data.success) {
             setActiveChatId(data.chatId);
             setMessages((prev) => [...prev, { role: 'assistant', text: data.reply, time: getTime() }]);
-
             setSessions((prev) => {
                 const exists = prev.find((s) => s._id === data.chatId);
                 if (exists) return prev.map((s) => s._id === data.chatId
                     ? { ...s, title: data.title, updatedAt: new Date().toISOString() } : s);
                 return [{ _id: data.chatId, title: data.title, preview: msg, updatedAt: new Date().toISOString() }, ...prev];
             });
-
-            // Auto-speak AI reply if enabled
-            if (autoSpeak && data.reply) {
-                playTextAsAudio(data.reply);
-            }
+            if (autoSpeak && data.reply) playTextAsAudio(data.reply);
         } else {
             setError(data.error || 'Something went wrong.');
             setMessages((prev) => prev.slice(0, -1));
         }
     };
 
-    // ── STT: Record voice ─────────────────────────────────────
     const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             audioChunksRef.current = [];
             const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-
-            recorder.ondataavailable = (e) => {
-                if (e.data.size > 0) audioChunksRef.current.push(e.data);
-            };
-
+            recorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
             recorder.onstop = async () => {
                 stream.getTracks().forEach((t) => t.stop());
                 const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
                 setTranscribing(true);
                 try {
                     const data = await transcribeAudio(blob, language, token);
-                    if (data.success && data.transcript) {
-                        setInput(data.transcript);
-                    } else {
-                        setError('Could not understand audio. Try again.');
-                    }
-                } finally {
-                    setTranscribing(false);
-                }
+                    if (data.success && data.transcript) setInput(data.transcript);
+                    else setError('Could not understand audio. Try again.');
+                } finally { setTranscribing(false); }
             };
-
             recorder.start();
             mediaRecorderRef.current = recorder;
             setRecording(true);
-        } catch (err) {
-            setError('Microphone access denied.');
-        }
+        } catch { setError('Microphone access denied.'); }
     };
 
-    const stopRecording = () => {
-        mediaRecorderRef.current?.stop();
-        setRecording(false);
-    };
+    const stopRecording  = () => { mediaRecorderRef.current?.stop(); setRecording(false); };
+    const toggleRecording = () => { if (recording) stopRecording(); else startRecording(); };
 
-    const toggleRecording = () => {
-        if (recording) stopRecording();
-        else startRecording();
-    };
-
-    // ── TTS: Play AI reply ────────────────────────────────────
     const playTextAsAudio = async (text) => {
         setSpeaking(true);
         try {
             const data = await speakText(text, language, token);
             if (data.success && data.audio) {
-                const audioSrc = `data:audio/wav;base64,${data.audio}`;
-                if (audioPlayerRef.current) {
-                    audioPlayerRef.current.pause();
-                }
-                const audio = new Audio(audioSrc);
+                const audio = new Audio(`data:audio/wav;base64,${data.audio}`);
                 audioPlayerRef.current = audio;
                 audio.onended = () => setSpeaking(false);
                 audio.onerror = () => setSpeaking(false);
                 await audio.play();
             }
-        } catch {
-            setSpeaking(false);
-        }
+        } catch { setSpeaking(false); }
     };
 
-    const stopSpeaking = () => {
-        audioPlayerRef.current?.pause();
-        audioPlayerRef.current = null;
-        setSpeaking(false);
-    };
-
-    const handleKey = (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
-    };
-
-    const hasMessages = messages.length > 0;
+    const stopSpeaking = () => { audioPlayerRef.current?.pause(); audioPlayerRef.current = null; setSpeaking(false); };
+    const handleKey    = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } };
 
     return (
-        <div style={s.page}>
+        <div className="d-flex chat-page">
 
             {/* ── Sidebar ── */}
-            <div style={{ ...s.sidebar, marginLeft: showSidebar ? 0 : -280 }}>
-                <div style={s.sidebarTop}>
-                    <div style={s.userCard}>
-                        <div style={s.userAvatar}>{userRole === 'admin' ? '👑' : '👤'}</div>
-                        <div style={{ flex:1, minWidth:0 }}>
-                            <div style={s.userPhone}>{userPhone}</div>
-                            <div style={s.userRoleBadge(userRole)}>
-                                {userRole === 'admin' ? 'Admin' : 'User'}
-                            </div>
+            <div className={`sidebar d-flex flex-column ${showSidebar ? '' : 'hidden'}`}>
+
+                {/* Top */}
+                <div className="p-3 border-bottom border-dark">
+                    {/* User card */}
+                    <div className="d-flex align-items-center gap-2 mb-3">
+                        <div className="user-avatar-sm d-flex align-items-center justify-content-center fs-5">
+                            {userRole === 'admin' ? '👑' : '👤'}
                         </div>
-                        <button onClick={() => setShowSidebar(false)} style={s.iconBtn}>✕</button>
+                        <div className="flex-grow-1 overflow-hidden">
+                            <div className="text-truncate user-phone">{userPhone}</div>
+                            <span className={userRole === 'admin' ? 'role-badge-admin' : 'role-badge-user'}>
+                                {userRole === 'admin' ? 'Admin' : 'User'}
+                            </span>
+                        </div>
+                        <button className="plain-btn" onClick={() => setShowSidebar(false)}>✕</button>
                     </div>
-                    <button onClick={startNewChat} style={s.newChatBtn}>
-                        <span>✏️</span> New Chat
+
+                    {/* New chat */}
+                    <button className="new-chat-btn btn w-100 d-flex align-items-center justify-content-center gap-2 py-2" onClick={startNewChat}>
+                        <i className="bi bi-pencil-square" /> New Chat
                     </button>
                 </div>
 
-                <div style={s.sessionsList}>
+                {/* Sessions list */}
+                <div className="sessions-list p-2">
                     {sessionsLoading ? (
-                        <p style={s.sidebarEmpty}>Loading chats...</p>
+                        <p className="text-center mt-4 session-meta">Loading chats...</p>
                     ) : sessions.length === 0 ? (
-                        <p style={s.sidebarEmpty}>No chats yet.<br />Start a conversation!</p>
+                        <p className="text-center mt-4 session-meta">No chats yet.<br />Start a conversation!</p>
                     ) : sessions.map((session) => (
-                        <div key={session._id} onClick={() => openSession(session._id)}
-                            style={{ ...s.sessionItem, ...(activeChatId === session._id ? s.sessionItemActive : {}) }}>
-                            <div style={s.sessionIcon}>💬</div>
-                            <div style={{ flex:1, minWidth:0 }}>
-                                <div style={s.sessionTitle}>{session.title}</div>
-                                <div style={s.sessionMeta}>{timeAgo(session.updatedAt)}</div>
+                        <div key={session._id}
+                            className={`session-item d-flex align-items-center gap-2 p-2 mb-1 ${activeChatId === session._id ? 'active' : ''}`}
+                            onClick={() => openSession(session._id)}
+                        >
+                            <span style={{ fontSize: 14 }}>💬</span>
+                            <div className="flex-grow-1 overflow-hidden">
+                                <div className="text-truncate session-title">{session.title}</div>
+                                <div className="session-meta">{timeAgo(session.updatedAt)}</div>
                             </div>
-                            <button onClick={(e) => removeSession(e, session._id)} style={s.iconBtn} title="Delete">🗑</button>
+                            <button className="plain-btn" onClick={(e) => removeSession(e, session._id)} title="Delete">
+                                <i className="bi bi-trash3" />
+                            </button>
                         </div>
                     ))}
                 </div>
 
-                <div style={s.sidebarFooter}>
-                    <button onClick={() => navigate(backRoute)} style={s.backBtn2}>
+                {/* Footer */}
+                <div className="p-2 d-flex gap-2 border-top border-dark">
+                    <button className="back-btn btn flex-grow-1 py-1" onClick={() => navigate(backRoute)}>
                         ← {userRole === 'admin' ? 'Dashboard' : 'Profile'}
                     </button>
                     {sessions.length > 0 && (
-                        <button onClick={handleClearAll} style={s.clearAllBtn}>🗑 All</button>
+                        <button className="clear-btn btn px-3 py-1" onClick={handleClearAll}>
+                            <i className="bi bi-trash3" /> All
+                        </button>
                     )}
                 </div>
             </div>
 
             {/* ── Main ── */}
-            <div style={s.main}>
+            <div className="d-flex flex-column flex-grow-1 overflow-hidden">
 
                 {/* Header */}
-                <div style={s.header}>
-                    <div style={s.headerLeft}>
+                <div className="header-bar d-flex align-items-center justify-content-between px-3 py-2 gap-3">
+                    <div className="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
                         {!showSidebar && (
-                            <button onClick={() => setShowSidebar(true)} style={s.iconBtnLight}>☰</button>
+                            <button className="icon-btn btn d-flex align-items-center justify-content-center" onClick={() => setShowSidebar(true)}>
+                                <i className="bi bi-list" />
+                            </button>
                         )}
-                        <div style={s.logo}>🤖</div>
-                        <div>
-                            <div style={s.headerTitle}>
+                        <div className="logo-icon d-flex align-items-center justify-content-center fs-5">🤖</div>
+                        <div className="overflow-hidden">
+                            <div className="text-truncate header-title">
                                 {activeChatId
                                     ? (sessions.find((x) => x._id === activeChatId)?.title || 'Chat')
                                     : 'Sarvam AI Assistant'}
                             </div>
-                            <div style={s.headerSub}><span style={s.dot} /> Online · sarvam-30b</div>
+                            <div className="d-flex align-items-center gap-1 header-sub">
+                                <span className="online-dot" /> Online · sarvam-30b
+                            </div>
                         </div>
                     </div>
-                    <div style={s.headerRight}>
-                        <select value={language} onChange={(e) => setLanguage(e.target.value)} style={s.select}>
-                            {LANGUAGES.map((l) => (
-                                <option key={l.code} value={l.code}>{l.label}</option>
-                            ))}
+                    <div className="d-flex align-items-center gap-2 flex-shrink-0">
+                        <select value={language} onChange={(e) => setLanguage(e.target.value)} className="lang-select form-select form-select-sm">
+                            {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
                         </select>
-                        {/* Auto-speak toggle */}
                         <button
+                            className={`icon-btn btn d-flex align-items-center justify-content-center ${autoSpeak ? 'autospeak-on' : ''}`}
                             onClick={() => setAutoSpeak((v) => !v)}
                             title={autoSpeak ? 'Auto-speak ON' : 'Auto-speak OFF'}
-                            style={{ ...s.iconBtnLight, background: autoSpeak ? 'rgba(124,106,247,0.2)' : 'transparent', color: autoSpeak ? '#a78bfa' : '#7a7a9a' }}
                         >
-                            🔊
+                            <i className="bi bi-volume-up" />
                         </button>
-                        <button onClick={startNewChat} style={s.iconBtnLight} title="New chat">✏️</button>
+                        <button className="icon-btn btn d-flex align-items-center justify-content-center" onClick={startNewChat} title="New chat">
+                            <i className="bi bi-pencil-square" />
+                        </button>
                     </div>
                 </div>
 
                 {/* Messages */}
-                <div style={s.messages}>
-                    {!hasMessages ? (
-                        <div style={s.welcome}>
-                            <div style={s.welcomeIcon}>🙏</div>
-                            <h2 style={s.welcomeTitle}>Namaste, {userPhone}!</h2>
-                            <p style={s.welcomeSub}>
+                <div className="messages-area p-3 d-flex flex-column gap-3">
+                    {messages.length === 0 ? (
+                        <div className="d-flex flex-column align-items-center justify-content-center flex-grow-1 text-center p-5 gap-3">
+                            <div className="welcome-icon d-flex align-items-center justify-content-center">🙏</div>
+                            <h5 className="welcome-title mb-0">Namaste, {userPhone}!</h5>
+                            <p className="welcome-sub mb-0">
                                 Type or <strong>speak</strong> your message in any Indian language.
                             </p>
-                            <div style={s.chips}>
+                            <div className="d-flex flex-wrap gap-2 justify-content-center">
                                 {SUGGESTIONS.map((sg) => (
-                                    <button key={sg} style={s.chip} onClick={() => handleSend(sg)}>{sg}</button>
+                                    <button key={sg} className="chip btn px-3 py-2" onClick={() => handleSend(sg)}>{sg}</button>
                                 ))}
                             </div>
                         </div>
                     ) : (
                         <>
                             {messages.map((m, i) => (
-                                <div key={i} style={{ ...s.msgRow, justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
-                                    {m.role === 'assistant' && <div style={s.avatarBot}>🤖</div>}
+                                <div key={i} className={`d-flex gap-2 align-items-end ${m.role === 'user' ? 'justify-content-end' : 'justify-content-start'}`}>
+                                    {m.role === 'assistant' && (
+                                        <div className="avatar-bot d-flex align-items-center justify-content-center">🤖</div>
+                                    )}
                                     <div>
-                                        <div style={m.role === 'user' ? s.bubbleUser : s.bubbleBot}>
+                                        {/* <div className={`${m.role === 'user' ? 'bubble-user' : 'bubble-bot'} px-3 py-2`}>
                                             {m.text}
-                                        </div>
-                                        <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:4, justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
-                                            {m.time && <span style={s.msgTime}>{m.time}</span>}
-                                            {/* Speak button on AI messages */}
+                                        </div> */}
+                                        {/* ✅ New - renders markdown */}
+<div className={`${m.role === 'user' ? 'bubble-user' : 'bubble-bot'} px-3 py-2`}>
+    {m.role === 'assistant'
+        ? <ReactMarkdown>{m.text}</ReactMarkdown>
+        : m.text
+    }
+</div>
+                                        <div className={`d-flex align-items-center gap-2 mt-1 ${m.role === 'user' ? 'justify-content-end' : 'justify-content-start'}`}>
+                                            {m.time && <span className="msg-time">{m.time}</span>}
                                             {m.role === 'assistant' && (
-                                                <button
-                                                    onClick={() => speaking ? stopSpeaking() : playTextAsAudio(m.text)}
-                                                    style={s.speakBtn}
-                                                    title="Listen to this message"
-                                                >
-                                                    {speaking ? '⏹' : '🔊'}
+                                                <button className="speak-btn" onClick={() => speaking ? stopSpeaking() : playTextAsAudio(m.text)} title="Listen">
+                                                    <i className={`bi ${speaking ? 'bi-stop-fill' : 'bi-volume-up'}`} />
                                                 </button>
                                             )}
                                         </div>
                                     </div>
                                     {m.role === 'user' && (
-                                        <div style={s.avatarUser}>{userRole === 'admin' ? '👑' : '👤'}</div>
+                                        <div className="avatar-user d-flex align-items-center justify-content-center">
+                                            {userRole === 'admin' ? '👑' : '👤'}
+                                        </div>
                                     )}
                                 </div>
                             ))}
 
                             {loading && (
-                                <div style={{ ...s.msgRow, justifyContent: 'flex-start' }}>
-                                    <div style={s.avatarBot}>🤖</div>
-                                    <div style={s.typingBubble}>
-                                        <span style={{ ...s.typingDot, animationDelay:'0s' }} />
-                                        <span style={{ ...s.typingDot, animationDelay:'0.2s' }} />
-                                        <span style={{ ...s.typingDot, animationDelay:'0.4s' }} />
+                                <div className="d-flex gap-2 align-items-end justify-content-start">
+                                    <div className="avatar-bot d-flex align-items-center justify-content-center">🤖</div>
+                                    <div className="bubble-bot d-flex gap-1 align-items-center px-3 py-2">
+                                        <span className="typing-dot" style={{ animationDelay: '0s' }} />
+                                        <span className="typing-dot" style={{ animationDelay: '0.2s' }} />
+                                        <span className="typing-dot" style={{ animationDelay: '0.4s' }} />
                                     </div>
                                 </div>
                             )}
@@ -376,33 +343,41 @@ export default function Chat() {
                     <div ref={messagesEndRef} />
                 </div>
 
-                {error && <div style={s.errorBar}>{error}</div>}
+                {/* Error */}
+                {error && (
+                    <div className="error-bar mx-3 mb-2 px-3 py-2 text-center">
+                        <i className="bi bi-exclamation-circle me-2" />{error}
+                    </div>
+                )}
 
-                {/* Input */}
-                <div style={s.inputArea}>
-                    {/* Status bar */}
+                {/* Input Area */}
+                <div className="input-area p-3">
+                    {/* Voice status */}
                     {(recording || transcribing || speaking) && (
-                        <div style={s.voiceStatus}>
-                            {recording   && <><span style={s.recDot} /> Recording… tap mic to stop</>}
-                            {transcribing && <>⏳ Transcribing…</>}
-                            {speaking     && <>🔊 Speaking… <button onClick={stopSpeaking} style={s.stopBtn}>Stop</button></>}
+                        <div className="voice-status d-flex align-items-center gap-2 p-2 mb-2">
+                            {recording    && <><span className="rec-dot" /> Recording… tap mic to stop</>}
+                            {transcribing && <><i className="bi bi-hourglass-split" /> Transcribing…</>}
+                            {speaking     && (
+                                <><i className="bi bi-volume-up" /> Speaking…
+                                    <button className="stop-btn ms-1" onClick={stopSpeaking}>Stop</button>
+                                </>
+                            )}
                         </div>
                     )}
-                    <div style={s.inputRow}>
-                        {/* Mic button */}
+
+                    {/* Input row */}
+                    <div className="input-wrap d-flex align-items-end gap-2 p-2">
                         <button
+                            className={`mic-btn d-flex align-items-center justify-content-center ${recording ? 'recording' : ''}`}
                             onClick={toggleRecording}
                             disabled={transcribing || loading}
                             title={recording ? 'Stop recording' : 'Start voice input'}
-                            style={{
-                                ...s.micBtn,
-                                background: recording ? '#f87171' : 'rgba(124,106,247,0.15)',
-                                border: recording ? '1px solid #f87171' : '1px solid #7c6af7',
-                                color: recording ? 'white' : '#a78bfa',
-                                animation: recording ? 'micPulse 1s infinite' : 'none',
-                            }}
                         >
-                            {transcribing ? '⏳' : recording ? '⏹' : '🎤'}
+                            {transcribing
+                                ? <i className="bi bi-hourglass-split" />
+                                : recording
+                                    ? <i className="bi bi-stop-fill" />
+                                    : <i className="bi bi-mic-fill" />}
                         </button>
 
                         <textarea
@@ -411,95 +386,25 @@ export default function Chat() {
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={handleKey}
                             placeholder={recording ? 'Listening…' : 'Type or speak your message…'}
-                            style={s.textarea}
+                            className="chat-input"
                         />
 
                         <button
+                            className="send-btn d-flex align-items-center justify-content-center"
                             onClick={() => handleSend()}
                             disabled={loading || !input.trim()}
-                            style={{ ...s.sendBtn, opacity: loading || !input.trim() ? 0.4 : 1, cursor: loading || !input.trim() ? 'not-allowed' : 'pointer' }}
                         >
-                            ➤
+                            <i className="bi bi-send-fill" />
                         </button>
                     </div>
-                    <p style={s.hint}>
-                        🎤 Tap mic to speak · 🔊 Toggle auto-speak · Supports 10+ Indian languages
+
+                    <p className="input-hint text-center mt-2 mb-0">
+                        <i className="bi bi-mic me-1" />Tap mic to speak ·
+                        <i className="bi bi-volume-up mx-1" />Toggle auto-speak ·
+                        Supports 10+ Indian languages
                     </p>
                 </div>
             </div>
-
-            <style>{`
-                @keyframes typingBounce { 0%,60%,100%{transform:translateY(0);opacity:0.4} 30%{transform:translateY(-5px);opacity:1} }
-                @keyframes dotPulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-                @keyframes micPulse { 0%,100%{box-shadow:0 0 0 0 rgba(248,113,113,0.4)} 50%{box-shadow:0 0 0 8px rgba(248,113,113,0)} }
-                @keyframes recBlink { 0%,100%{opacity:1} 50%{opacity:0.2} }
-            `}</style>
         </div>
     );
 }
-
-const s = {
-    page: { display:'flex', height:'100vh', background:'#0f0f13', color:'#e8e8f0', fontFamily:"'Inter',sans-serif", overflow:'hidden' },
-
-    sidebar: { width:280, flexShrink:0, background:'#1a1a24', borderRight:'1px solid #2e2e3f', display:'flex', flexDirection:'column', transition:'margin-left 0.3s ease' },
-    sidebarTop: { padding:'14px 12px', borderBottom:'1px solid #2e2e3f' },
-    userCard: { display:'flex', alignItems:'center', gap:8, marginBottom:12 },
-    userAvatar: { width:34, height:34, borderRadius:10, flexShrink:0, background:'rgba(124,106,247,0.2)', border:'1px solid #7c6af7', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16 },
-    userPhone: { fontSize:13, fontWeight:600, color:'#e8e8f0', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' },
-    userRoleBadge: (role) => ({ fontSize:10, fontWeight:600, padding:'1px 7px', borderRadius:20, background: role==='admin'?'rgba(251,191,36,0.15)':'rgba(124,106,247,0.15)', color: role==='admin'?'#fbbf24':'#a78bfa', border: role==='admin'?'1px solid #fbbf24':'1px solid #7c6af7' }),
-    newChatBtn: { width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:8, background:'linear-gradient(135deg,#7c6af7,#c084fc)', border:'none', borderRadius:10, color:'white', padding:'9px 14px', fontSize:13, fontWeight:600, cursor:'pointer' },
-    sessionsList: { flex:1, overflowY:'auto', padding:'8px' },
-    sidebarEmpty: { color:'#7a7a9a', fontSize:13, textAlign:'center', marginTop:24, lineHeight:1.8 },
-    sessionItem: { display:'flex', alignItems:'center', gap:8, padding:'9px 10px', borderRadius:10, cursor:'pointer', marginBottom:2, border:'1px solid transparent' },
-    sessionItemActive: { background:'rgba(124,106,247,0.12)', border:'1px solid rgba(124,106,247,0.3)' },
-    sessionIcon: { fontSize:14, flexShrink:0 },
-    sessionTitle: { fontSize:13, color:'#e8e8f0', fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' },
-    sessionMeta: { fontSize:10, color:'#7a7a9a', marginTop:2 },
-    sidebarFooter: { padding:'10px 12px', borderTop:'1px solid #2e2e3f', display:'flex', gap:8 },
-    backBtn2: { flex:1, background:'transparent', border:'1px solid #2e2e3f', color:'#7a7a9a', padding:'7px 10px', borderRadius:8, fontSize:12, cursor:'pointer' },
-    clearAllBtn: { background:'transparent', border:'1px solid #f87171', color:'#f87171', padding:'7px 10px', borderRadius:8, fontSize:12, cursor:'pointer' },
-
-    main: { flex:1, display:'flex', flexDirection:'column', overflow:'hidden' },
-    header: { display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 20px', background:'#1a1a24', borderBottom:'1px solid #2e2e3f', flexShrink:0, gap:12 },
-    headerLeft: { display:'flex', alignItems:'center', gap:12, flex:1, minWidth:0 },
-    logo: { width:36, height:36, borderRadius:10, flexShrink:0, background:'linear-gradient(135deg,#7c6af7,#c084fc)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 },
-    headerTitle: { fontSize:14, fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' },
-    headerSub: { fontSize:11, color:'#7a7a9a', display:'flex', alignItems:'center', gap:5 },
-    dot: { display:'inline-block', width:6, height:6, borderRadius:'50%', background:'#34d399', animation:'dotPulse 2s infinite' },
-    headerRight: { display:'flex', alignItems:'center', gap:8, flexShrink:0 },
-    select: { background:'#22222f', border:'1px solid #2e2e3f', color:'#e8e8f0', padding:'5px 8px', borderRadius:8, fontSize:12, cursor:'pointer', outline:'none' },
-
-    messages: { flex:1, overflowY:'auto', padding:'20px', display:'flex', flexDirection:'column', gap:16 },
-    welcome: { display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', flex:1, gap:14, textAlign:'center', padding:'40px 20px' },
-    welcomeIcon: { width:64, height:64, borderRadius:18, background:'rgba(124,106,247,0.15)', border:'1px solid #7c6af7', display:'flex', alignItems:'center', justifyContent:'center', fontSize:30 },
-    welcomeTitle: { fontSize:20, fontWeight:600, margin:0 },
-    welcomeSub: { fontSize:14, color:'#7a7a9a', lineHeight:1.6, margin:0 },
-    chips: { display:'flex', flexWrap:'wrap', gap:8, justifyContent:'center', marginTop:8 },
-    chip: { background:'#22222f', border:'1px solid #2e2e3f', color:'#7a7a9a', padding:'7px 14px', borderRadius:20, fontSize:13, cursor:'pointer' },
-
-    msgRow: { display:'flex', gap:10, alignItems:'flex-end' },
-    avatarBot: { width:30, height:30, borderRadius:8, flexShrink:0, background:'linear-gradient(135deg,#7c6af7,#c084fc)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14 },
-    avatarUser: { width:30, height:30, borderRadius:8, flexShrink:0, background:'#2d2550', border:'1px solid #7c6af7', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14 },
-    bubbleUser: { background:'#2d2550', border:'1px solid rgba(124,106,247,0.3)', borderRadius:'14px 14px 4px 14px', padding:'10px 14px', fontSize:14, lineHeight:1.6, maxWidth:500, wordBreak:'break-word', color:'#e8e8f0' },
-    bubbleBot: { background:'#1e1e2b', border:'1px solid #2e2e3f', borderRadius:'14px 14px 14px 4px', padding:'10px 14px', fontSize:14, lineHeight:1.6, maxWidth:500, wordBreak:'break-word', color:'#e8e8f0' },
-    msgTime: { fontSize:10, color:'#7a7a9a' },
-    speakBtn: { background:'transparent', border:'none', color:'#7a7a9a', fontSize:12, cursor:'pointer', padding:'0 2px' },
-
-    typingBubble: { display:'flex', gap:4, padding:'12px 16px', background:'#1e1e2b', border:'1px solid #2e2e3f', borderRadius:'14px 14px 14px 4px', alignItems:'center' },
-    typingDot: { display:'inline-block', width:7, height:7, background:'#7c6af7', borderRadius:'50%', animation:'typingBounce 1.2s infinite' },
-    errorBar: { background:'#2d1515', border:'1px solid #f87171', color:'#f87171', padding:'10px 20px', fontSize:13, textAlign:'center', flexShrink:0 },
-
-    inputArea: { background:'#1a1a24', borderTop:'1px solid #2e2e3f', padding:'12px 20px', flexShrink:0 },
-    voiceStatus: { display:'flex', alignItems:'center', gap:8, fontSize:12, color:'#a78bfa', marginBottom:8, padding:'6px 10px', background:'rgba(124,106,247,0.08)', borderRadius:8 },
-    recDot: { display:'inline-block', width:8, height:8, borderRadius:'50%', background:'#f87171', animation:'recBlink 1s infinite' },
-    stopBtn: { background:'transparent', border:'1px solid #f87171', color:'#f87171', padding:'2px 8px', borderRadius:6, fontSize:11, cursor:'pointer', marginLeft:4 },
-
-    inputRow: { display:'flex', gap:8, alignItems:'flex-end', background:'#22222f', border:'1px solid #2e2e3f', borderRadius:14, padding:'10px 12px' },
-    micBtn: { width:36, height:36, borderRadius:10, border:'none', fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all 0.2s' },
-    textarea: { flex:1, background:'transparent', border:'none', outline:'none', color:'#e8e8f0', fontSize:14, fontFamily:'inherit', resize:'none', lineHeight:1.5, maxHeight:120 },
-    sendBtn: { background:'#7c6af7', border:'none', borderRadius:10, width:36, height:36, color:'white', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 },
-    hint: { fontSize:11, color:'#7a7a9a', marginTop:8, textAlign:'center' },
-
-    iconBtn: { background:'transparent', border:'none', color:'#7a7a9a', fontSize:14, cursor:'pointer', padding:4 },
-    iconBtnLight: { background:'transparent', border:'1px solid #2e2e3f', color:'#7a7a9a', width:34, height:34, borderRadius:8, fontSize:14, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' },
-};

@@ -1,6 +1,9 @@
+// src/pages/Dashboard.jsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getDashboard, updateUserStatus, deleteUser, getUserDetail, logoutUser } from '../services/api';
+// import './Dashboard.css';
+// import './App.css';
 
 function Dashboard() {
     const [data,         setData]         = useState(null);
@@ -13,7 +16,7 @@ function Dashboard() {
     const [selectedUser, setSelectedUser] = useState(null);
     const [detailLoad,   setDetailLoad]   = useState(false);
 
-    const PERPAGE  = 5; // users per page
+    const PERPAGE  = 5;
     const token    = localStorage.getItem('token');
     const navigate = useNavigate();
 
@@ -40,9 +43,7 @@ function Dashboard() {
     const handleStatus = async (phone, status) => {
         await updateUserStatus(phone, status, token);
         loadData();
-        if (selectedUser?.phone === phone) {
-            setSelectedUser(prev => ({ ...prev, status }));
-        }
+        if (selectedUser?.phone === phone) setSelectedUser(prev => ({ ...prev, status }));
     };
 
     const handleDelete = async (phone) => {
@@ -59,7 +60,6 @@ function Dashboard() {
         setDetailLoad(false);
     };
 
-    // ── Export CSV ────────────────────────────────────────
     const exportCSV = () => {
         const headers = ['Phone', 'Name', 'Email', 'Role', 'Status', 'Joined'];
         const rows    = data.users.map(u => [
@@ -76,9 +76,11 @@ function Dashboard() {
     };
 
     if (loading) return (
-        <div className="container mt-5 text-center">
-            <div className="spinner-border text-primary"></div>
-            <p className="mt-2">Loading...</p>
+        <div className="d-flex align-items-center justify-content-center" style={{ minHeight:'100vh' }}>
+            <div className="text-center">
+                <div className="spinner-border text-primary mb-3" />
+                <p className="text-muted">Loading dashboard...</p>
+            </div>
         </div>
     );
 
@@ -88,59 +90,59 @@ function Dashboard() {
         </div>
     );
 
-    // ── Filter + Search ───────────────────────────────────
     const filtered = data.users.filter(u => {
-        if (filter     !== 'all' && u.status !== filter)   return false;
+        if (filter     !== 'all' && u.status !== filter)     return false;
         if (roleFilter !== 'all' && u.role   !== roleFilter) return false;
         if (search && !u.phone.includes(search) &&
             !(u.name || '').toLowerCase().includes(search.toLowerCase())) return false;
         return true;
     });
 
-    // ── Pagination ────────────────────────────────────────
     const totalPages = Math.ceil(filtered.length / PERPAGE);
     const paginated  = filtered.slice((page - 1) * PERPAGE, page * PERPAGE);
 
+    const metrics = [
+        { label: 'Total',    value: data.metrics.total,    color: 'primary', cls: 'total'    },
+        { label: 'Pending',  value: data.metrics.pending,  color: 'warning', cls: 'pending'  },
+        { label: 'Approved', value: data.metrics.approved, color: 'success', cls: 'approved' },
+        { label: 'Rejected', value: data.metrics.rejected, color: 'danger',  cls: 'rejected' },
+    ];
+
     return (
-        <div>
-            {/* Navbar */}
-            <nav className="navbar navbar-dark bg-dark px-4">
-                <span className="navbar-brand mb-0 h1">Admin Dashboard</span>
-                <div className="d-flex align-items-center gap-3">
-                    <span className="text-white" style={{ fontSize:'14px' }}>
-                        👤 {localStorage.getItem('phone')}
+        <div className="dashboard-page">
+
+            {/* ── Navbar ── */}
+            <nav className="navbar dashboard-navbar">
+                <span className="navbar-brand">🛡️ Admin Dashboard</span>
+                <div className="d-flex align-items-center gap-2">
+                    <span className="nav-user-info">
+                        👤 {localStorage.getItem('name') || localStorage.getItem('phone')}
                     </span>
-                    <button className="btn btn-outline-warning btn-sm" onClick={() => navigate('/profile')}>
-                        Profile
+                    <button className="btn btn-sm btn-outline-light" onClick={() => navigate('/profile')}>
+                        <i className="bi bi-person me-1" />Profile
                     </button>
-                    <button className="btn btn-outline-light btn-sm" onClick={handleLogout}>
-                        Logout
+                    {/* <button className="btn btn-sm btn-outline-warning" onClick={() => navigate('/chat')}>
+                        <i className="bi bi-chat-dots me-1" />AI Chat
+                    </button> */}
+                    <button className="btn btn-sm btn-outline-light" onClick={handleLogout}>
+                        <i className="bi bi-box-arrow-right me-1" />Logout
                     </button>
-                    <button  className="btn btn-outline-light btn-sm" onClick={() => navigate('/chat')}>
-  Open AI Chat
-</button>
                 </div>
             </nav>
 
-            <div className="container-fluid mt-4 px-4">
+            <div className="container-fluid px-4 py-4">
 
-                {/* Metrics */}
+                {/* ── Metric Cards ── */}
                 <div className="row mb-4">
-                    {[
-                        { label:'Total',    value: data.metrics.total,    color:'primary' },
-                        { label:'Pending',  value: data.metrics.pending,  color:'warning' },
-                        { label:'Approved', value: data.metrics.approved, color:'success' },
-                        { label:'Rejected', value: data.metrics.rejected, color:'danger'  },
-                    ].map(m => (
+                    {metrics.map(m => (
                         <div className="col-6 col-md-3 mb-3" key={m.label}>
                             <div
-                                className={`card border-${m.color} text-center`}
-                                style={{ cursor:'pointer' }}
+                                className={`card metric-card ${m.cls}`}
                                 onClick={() => { setFilter(m.label.toLowerCase()); setPage(1); }}
                             >
-                                <div className="card-body py-3">
-                                    <h2 className={`text-${m.color} mb-0`}>{m.value}</h2>
-                                    <small className="text-muted">{m.label}</small>
+                                <div className="card-body text-center py-3">
+                                    <div className={`metric-value text-${m.color}`}>{m.value}</div>
+                                    <div className="metric-label">{m.label}</div>
                                 </div>
                             </div>
                         </div>
@@ -149,21 +151,21 @@ function Dashboard() {
 
                 <div className="row">
 
-                    {/* Table */}
+                    {/* ── Table Column ── */}
                     <div className={selectedUser ? 'col-md-7' : 'col-12'}>
 
-                        {/* Search + Filter bar */}
-                        <div className="d-flex gap-2 mb-3 flex-wrap align-items-center">
+                        {/* Filter Bar */}
+                        <div className="filter-bar d-flex gap-2 flex-wrap align-items-center">
                             <input
                                 className="form-control"
-                                style={{ maxWidth:'220px' }}
-                                placeholder="Search phone or name..."
+                                style={{ maxWidth: 220 }}
+                                placeholder="🔍 Search phone or name..."
                                 value={search}
                                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                             />
                             <select
                                 className="form-select"
-                                style={{ maxWidth:'130px' }}
+                                style={{ maxWidth: 140 }}
                                 value={filter}
                                 onChange={(e) => { setFilter(e.target.value); setPage(1); }}
                             >
@@ -174,7 +176,7 @@ function Dashboard() {
                             </select>
                             <select
                                 className="form-select"
-                                style={{ maxWidth:'120px' }}
+                                style={{ maxWidth: 130 }}
                                 value={roleFilter}
                                 onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
                             >
@@ -182,217 +184,187 @@ function Dashboard() {
                                 <option value="user">User</option>
                                 <option value="admin">Admin</option>
                             </select>
-                            <button className="btn btn-outline-secondary" onClick={loadData}>
-                                ↻
+                            <button className="btn btn-outline-secondary" onClick={loadData} title="Refresh">
+                                <i className="bi bi-arrow-clockwise" />
                             </button>
-                            <button className="btn btn-outline-success ms-auto" onClick={exportCSV}>
-                                ↓ Export CSV
+                            <button className="btn btn-outline-success export-btn ms-auto" onClick={exportCSV}>
+                                <i className="bi bi-download me-1" />Export CSV
                             </button>
                         </div>
 
                         {/* Result count */}
-                        <p className="text-muted small mb-2">
+                        <p className="result-count mb-2">
                             Showing {paginated.length} of {filtered.length} users
                             {filter !== 'all' && ` — filtered by: ${filter}`}
                         </p>
 
                         {/* Table */}
-                        <div className="table-responsive">
-                            <table className="table table-bordered table-hover align-middle">
-                                <thead className="table-dark">
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Phone</th>
-                                        <th>Name</th>
-                                        <th>Role</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {paginated.length === 0 ? (
+                        <div className="users-table-wrap">
+                            <div className="table-responsive">
+                                <table className="table users-table table-hover align-middle">
+                                    <thead>
                                         <tr>
-                                            <td colSpan="6" className="text-center text-muted py-3">
-                                                No users found
-                                            </td>
+                                            <th>#</th>
+                                            <th>Phone</th>
+                                            <th>Name</th>
+                                            <th>Role</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
                                         </tr>
-                                    ) : paginated.map((u, i) => (
-                                        <tr key={u.phone} className={selectedUser?.phone === u.phone ? 'table-active' : ''}>
-                                            <td className="text-muted small">{(page-1)*PERPAGE + i + 1}</td>
-                                            <td style={{ fontFamily:'monospace' }}>{u.phone}</td>
-                                            <td>{u.name || <span className="text-muted">—</span>}</td>
-                                            <td>
-                                                <span className={`badge bg-${u.role === 'admin' ? 'danger' : 'secondary'}`}>
-                                                    {u.role}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <span className={`badge bg-${
-                                                    u.status === 'approved' ? 'success' :
-                                                    u.status === 'pending'  ? 'warning' : 'danger'
-                                                }`}>
-                                                    {u.status}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <div className="d-flex gap-1 flex-wrap">
-                                                    <button className="btn btn-sm btn-info text-white" onClick={() => handleView(u.phone)}>
-                                                        View
-                                                    </button>
-                                                    {u.status === 'pending' && (
-                                                        <>
-                                                            <button className="btn btn-sm btn-success" onClick={() => handleStatus(u.phone, 'approved')}>
-                                                                ✓
-                                                            </button>
-                                                            <button className="btn btn-sm btn-warning" onClick={() => handleStatus(u.phone, 'rejected')}>
-                                                                ✗
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                    <button className="btn btn-sm btn-danger" onClick={() => handleDelete(u.phone)}>
-                                                        🗑
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Pagination */}
-                        {totalPages > 1 && (
-                            <div className="d-flex justify-content-between align-items-center mt-2">
-                                <small className="text-muted">
-                                    Page {page} of {totalPages}
-                                </small>
-                                <div className="d-flex gap-1">
-                                    <button
-                                        className="btn btn-sm btn-outline-secondary"
-                                        onClick={() => setPage(1)}
-                                        disabled={page === 1}
-                                    >
-                                        «
-                                    </button>
-                                    <button
-                                        className="btn btn-sm btn-outline-secondary"
-                                        onClick={() => setPage(p => p - 1)}
-                                        disabled={page === 1}
-                                    >
-                                        ‹
-                                    </button>
-                                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                                        <button
-                                            key={p}
-                                            className={`btn btn-sm ${page === p ? 'btn-primary' : 'btn-outline-secondary'}`}
-                                            onClick={() => setPage(p)}
-                                        >
-                                            {p}
-                                        </button>
-                                    ))}
-                                    <button
-                                        className="btn btn-sm btn-outline-secondary"
-                                        onClick={() => setPage(p => p + 1)}
-                                        disabled={page === totalPages}
-                                    >
-                                        ›
-                                    </button>
-                                    <button
-                                        className="btn btn-sm btn-outline-secondary"
-                                        onClick={() => setPage(totalPages)}
-                                        disabled={page === totalPages}
-                                    >
-                                        »
-                                    </button>
-                                </div>
+                                    </thead>
+                                    <tbody>
+                                        {paginated.length === 0 ? (
+                                            <tr className="empty-row">
+                                                <td colSpan="6" className="text-center py-4">
+                                                    <i className="bi bi-inbox fs-4 d-block mb-2 text-muted" />
+                                                    No users found
+                                                </td>
+                                            </tr>
+                                        ) : paginated.map((u, i) => (
+                                            <tr key={u.phone} className={selectedUser?.phone === u.phone ? 'row-active' : ''}>
+                                                <td className="text-muted">{(page-1)*PERPAGE + i + 1}</td>
+                                                <td className="phone-cell">{u.phone}</td>
+                                                <td>{u.name || <span className="text-muted">—</span>}</td>
+                                                <td>
+                                                    <span className={`role-badge badge bg-${u.role === 'admin' ? 'danger' : 'secondary'}`}>
+                                                        {u.role}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span className={`status-badge badge bg-${
+                                                        u.status === 'approved' ? 'success' :
+                                                        u.status === 'pending'  ? 'warning' : 'danger'
+                                                    }`}>
+                                                        {u.status}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <div className="d-flex gap-1 flex-wrap">
+                                                        <button className="btn btn-sm btn-info text-white action-btn" onClick={() => handleView(u.phone)}>
+                                                            <i className="bi bi-eye me-1" />View
+                                                        </button>
+                                                        {u.status === 'pending' && (
+                                                            <>
+                                                                <button className="btn btn-sm btn-success action-btn" onClick={() => handleStatus(u.phone, 'approved')}>
+                                                                    <i className="bi bi-check-lg" />
+                                                                </button>
+                                                                <button className="btn btn-sm btn-warning action-btn" onClick={() => handleStatus(u.phone, 'rejected')}>
+                                                                    <i className="bi bi-x-lg" />
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                        <button className="btn btn-sm btn-danger action-btn" onClick={() => handleDelete(u.phone)}>
+                                                            <i className="bi bi-trash3" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
-                        )}
+
+                            {/* Pagination */}
+                            {totalPages > 1 && (
+                                <div className="pagination-wrap d-flex justify-content-between align-items-center">
+                                    <small className="text-muted">Page {page} of {totalPages}</small>
+                                    <div className="d-flex gap-1">
+                                        <button className="btn btn-sm btn-outline-secondary" onClick={() => setPage(1)} disabled={page === 1}>«</button>
+                                        <button className="btn btn-sm btn-outline-secondary" onClick={() => setPage(p => p-1)} disabled={page === 1}>‹</button>
+                                        {Array.from({ length: totalPages }, (_, i) => i+1).map(p => (
+                                            <button
+                                                key={p}
+                                                className={`btn btn-sm ${page === p ? 'btn-primary' : 'btn-outline-secondary'}`}
+                                                onClick={() => setPage(p)}
+                                            >{p}</button>
+                                        ))}
+                                        <button className="btn btn-sm btn-outline-secondary" onClick={() => setPage(p => p+1)} disabled={page === totalPages}>›</button>
+                                        <button className="btn btn-sm btn-outline-secondary" onClick={() => setPage(totalPages)} disabled={page === totalPages}>»</button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
-                    {/* User Detail Panel */}
+                    {/* ── User Detail Panel ── */}
                     {selectedUser && (
                         <div className="col-md-5">
-                            <div className="card shadow-sm">
-                                <div className="card-body p-4">
+                            <div className="card detail-card">
+                                <div className="card-body">
+
+                                    {/* Header */}
                                     <div className="d-flex justify-content-between align-items-center mb-3">
-                                        <h5 className="mb-0">User Detail</h5>
+                                        <span className="detail-header">
+                                            <i className="bi bi-person-circle me-2 text-primary" />User Detail
+                                        </span>
                                         <button className="btn btn-sm btn-outline-secondary" onClick={() => setSelectedUser(null)}>
-                                            ✕
+                                            <i className="bi bi-x-lg" />
                                         </button>
                                     </div>
 
                                     {detailLoad ? (
-                                        <div className="text-center py-3">
-                                            <div className="spinner-border spinner-border-sm"></div>
+                                        <div className="text-center py-4">
+                                            <div className="spinner-border spinner-border-sm text-primary" />
                                         </div>
                                     ) : (
-                                        <div>
+                                        <>
+                                            {/* Avatar */}
                                             <div className="text-center mb-3">
-            {selectedUser.profilePicture ? (
-                <img
-                    src={`http://localhost:3000/${selectedUser.profilePicture}`}
-                    alt="Profile"
-                    style={{
-                        width: '80px', height: '80px',
-                        borderRadius: '50%',
-                        objectFit: 'cover',
-                        border: '3px solid #dee2e6'
-                    }}
-                />
-            ) : (
-                <div style={{
-                    width: '80px', height: '80px',
-                    borderRadius: '50%',
-                    background: '#0d6efd',
-                    display: 'flex', alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '2rem', color: '#fff',
-                    margin: '0 auto'
-                }}>
-                    {selectedUser.name ? selectedUser.name[0].toUpperCase() : '?'}
-                </div>
-            )}
-            <h6 className="mt-2 mb-0">{selectedUser.name || '—'}</h6>
-            <small className="text-muted">{selectedUser.phone}</small>
-        </div>
+                                                {selectedUser.profilePicture ? (
+                                                    <img
+                                                        src={`http://localhost:3000/${selectedUser.profilePicture}`}
+                                                        alt="Profile"
+                                                        className="detail-avatar-img"
+                                                    />
+                                                ) : (
+                                                    <div className="detail-avatar-placeholder">
+                                                        {selectedUser.name ? selectedUser.name[0].toUpperCase() : '?'}
+                                                    </div>
+                                                )}
+                                                <div className="detail-name">{selectedUser.name || '—'}</div>
+                                                <div className="detail-phone">{selectedUser.phone}</div>
+                                            </div>
+
+                                            {/* Fields */}
                                             {[
-                                                { label:'Phone',   value: selectedUser.phone   },
-                                                { label:'Name',    value: selectedUser.name    },
-                                                { label:'Email',   value: selectedUser.email   },
-                                                { label:'Address', value: selectedUser.address },
-                                                { label:'Gender',  value: selectedUser.gender  },
-                                                { label:'Role',    value: selectedUser.role    },
-                                                { label:'Status',  value: selectedUser.status  },
-                                                { label:'Joined',  value: selectedUser.createdAt?.slice(0,10) },
+                                                { label: 'Phone',   value: selectedUser.phone   },
+                                                { label: 'Name',    value: selectedUser.name    },
+                                                { label: 'Email',   value: selectedUser.email   },
+                                                { label: 'Address', value: selectedUser.address },
+                                                { label: 'Gender',  value: selectedUser.gender  },
+                                                { label: 'Role',    value: selectedUser.role    },
+                                                { label: 'Status',  value: selectedUser.status  },
+                                                { label: 'Joined',  value: selectedUser.createdAt?.slice(0,10) },
                                             ].map(f => (
-                                                <div className="d-flex justify-content-between border-bottom py-2" key={f.label}>
-                                                    <span className="text-muted small">{f.label}</span>
-                                                    <span className="fw-bold small">{f.value || '—'}</span>
+                                                <div className="detail-row" key={f.label}>
+                                                    <span className="detail-label">{f.label}</span>
+                                                    <span className="detail-value">{f.value || '—'}</span>
                                                 </div>
                                             ))}
 
                                             {/* Activity Log */}
-                                            <h6 className="mt-3 mb-2">Activity Log</h6>
+                                            <div className="activity-title">
+                                                <i className="bi bi-clock-history me-1" />Activity Log
+                                            </div>
                                             {selectedUser.activityLog?.length ? (
-                                                <div style={{ maxHeight:'180px', overflowY:'auto' }}>
+                                                <div className="activity-log">
                                                     {[...selectedUser.activityLog].reverse().slice(0,10).map((log, i) => (
-                                                        <div key={i} className="d-flex justify-content-between border-bottom py-1">
+                                                        <div key={i} className="activity-row">
                                                             <span className={`badge bg-${
                                                                 log.action === 'login'       ? 'success' :
                                                                 log.action === 'otp_request' ? 'primary' :
-                                                                log.action === 'otp_failed'  ? 'warning' :
-                                                                'secondary'
+                                                                log.action === 'otp_failed'  ? 'warning' : 'secondary'
                                                             }`}>
                                                                 {log.action}
                                                             </span>
-                                                            <small className="text-muted">
+                                                            <span className="activity-time">
                                                                 {new Date(log.timestamp).toLocaleString()}
-                                                            </small>
+                                                            </span>
                                                         </div>
                                                     ))}
                                                 </div>
                                             ) : (
-                                                <p className="text-muted small">No activity yet</p>
+                                                <p className="text-muted" style={{ fontSize:12 }}>No activity yet</p>
                                             )}
 
                                             {/* Actions */}
@@ -400,25 +372,45 @@ function Dashboard() {
                                                 {selectedUser.status === 'pending' && (
                                                     <>
                                                         <button className="btn btn-success btn-sm" onClick={() => handleStatus(selectedUser.phone, 'approved')}>
-                                                            Approve
+                                                            <i className="bi bi-check-lg me-1" />Approve
                                                         </button>
                                                         <button className="btn btn-warning btn-sm" onClick={() => handleStatus(selectedUser.phone, 'rejected')}>
-                                                            Reject
+                                                            <i className="bi bi-x-lg me-1" />Reject
                                                         </button>
                                                     </>
                                                 )}
                                                 <button className="btn btn-danger btn-sm" onClick={() => handleDelete(selectedUser.phone)}>
-                                                    Delete
+                                                    <i className="bi bi-trash3 me-1" />Delete
                                                 </button>
                                             </div>
-                                        </div>
+                                        </>
                                     )}
                                 </div>
                             </div>
                         </div>
                     )}
                 </div>
+                {/* ── Floating AI Chat Button ── */}
+<div className="text-center mt-4 mb-4">
+    <button
+        className="btn btn-lg px-5 py-3"
+        onClick={() => navigate('/chat')}
+        style={{
+            background: 'linear-gradient(135deg, #7c6af7, #c084fc)',
+            border: 'none',
+            borderRadius: '50px',
+            color: 'white',
+            fontWeight: '700',
+            fontSize: '16px',
+            boxShadow: '0 8px 24px rgba(124,106,247,0.4)',
+        }}
+    >
+        <i className="bi bi-chat-dots-fill me-2" />
+        Open AI Chat
+    </button>
+</div>
             </div>
+            
         </div>
     );
 }
