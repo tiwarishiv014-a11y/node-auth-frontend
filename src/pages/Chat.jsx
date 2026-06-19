@@ -31,40 +31,41 @@ function getTime() {
 }
 
 function timeAgo(dateStr) {
-    const diff  = Date.now() - new Date(dateStr).getTime();
-    const mins  = Math.floor(diff / 60000);
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
-    const days  = Math.floor(diff / 86400000);
-    if (mins < 1)   return 'Just now';
-    if (mins < 60)  return `${mins}m ago`;
+    const days = Math.floor(diff / 86400000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
     if (hours < 24) return `${hours}h ago`;
     return `${days}d ago`;
 }
 
 export default function Chat() {
-    const [messages, setMessages]               = useState([]);
-    const [sessions, setSessions]               = useState([]);
-    const [activeChatId, setActiveChatId]       = useState(null);
-    const [input, setInput]                     = useState('');
-    const [language, setLanguage]               = useState('hi-IN');
-    const [loading, setLoading]                 = useState(false);
+    const [messages, setMessages] = useState([]);
+    const [sessions, setSessions] = useState([]);
+    const [activeChatId, setActiveChatId] = useState(null);
+    const [input, setInput] = useState('');
+    const [language, setLanguage] = useState('hi-IN');
+    const [loading, setLoading] = useState(false);
     const [sessionsLoading, setSessionsLoading] = useState(true);
-    const [error, setError]                     = useState('');
-    const [showSidebar, setShowSidebar]         = useState(true);
-    const [recording, setRecording]             = useState(false);
-    const [transcribing, setTranscribing]       = useState(false);
-    const [speaking, setSpeaking]               = useState(false);
-    const [autoSpeak, setAutoSpeak]             = useState(false);
+    const [error, setError] = useState('');
+    const [showSidebar, setShowSidebar] = useState(true);
+    const [recording, setRecording] = useState(false);
+    const [transcribing, setTranscribing] = useState(false);
+    const [speaking, setSpeaking] = useState(false);
+    const [autoSpeak, setAutoSpeak] = useState(false);
+    const [aiModel, setAiModel] = useState('sarvam');
 
-    const messagesEndRef   = useRef(null);
+    const messagesEndRef = useRef(null);
     const mediaRecorderRef = useRef(null);
-    const audioChunksRef   = useRef([]);
-    const audioPlayerRef   = useRef(null);
-    const navigate         = useNavigate();
+    const audioChunksRef = useRef([]);
+    const audioPlayerRef = useRef(null);
+    const navigate = useNavigate();
 
-    const token     = localStorage.getItem('token');
+    const token = localStorage.getItem('token');
     const userPhone = localStorage.getItem('phone') || 'User';
-    const userRole  = localStorage.getItem('role')  || 'user';
+    const userRole = localStorage.getItem('role') || 'user';
     const backRoute = userRole === 'admin' ? '/dashboard' : '/profile';
 
     useEffect(() => { if (!token) navigate('/login'); }, [token, navigate]);
@@ -114,7 +115,7 @@ export default function Chat() {
         setInput(''); setError('');
         setMessages((prev) => [...prev, { role: 'user', text: msg, time: getTime() }]);
         setLoading(true);
-        const data = await sendChatMessage(msg, language, token, activeChatId);
+        const data = await sendChatMessage(msg, language, token, activeChatId, aiModel);
         setLoading(false);
         if (data.success) {
             setActiveChatId(data.chatId);
@@ -154,7 +155,7 @@ export default function Chat() {
         } catch { setError('Microphone access denied.'); }
     };
 
-    const stopRecording  = () => { mediaRecorderRef.current?.stop(); setRecording(false); };
+    const stopRecording = () => { mediaRecorderRef.current?.stop(); setRecording(false); };
     const toggleRecording = () => { if (recording) stopRecording(); else startRecording(); };
 
     const playTextAsAudio = async (text) => {
@@ -172,7 +173,7 @@ export default function Chat() {
     };
 
     const stopSpeaking = () => { audioPlayerRef.current?.pause(); audioPlayerRef.current = null; setSpeaking(false); };
-    const handleKey    = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } };
+    const handleKey = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } };
 
     return (
         <div className="d-flex chat-page">
@@ -261,10 +262,32 @@ export default function Chat() {
                             </div>
                         </div>
                     </div>
+                    {/* ✅ NEW: Added AI Model Selector in Header */}
                     <div className="d-flex align-items-center gap-2 flex-shrink-0">
+                        {/* ✅ NEW: AI Model Toggle Buttons */}
+                       <div className="ai-model-toggle" role="group" aria-label="AI Model Selector">
+    <button
+        type="button"
+        className={`ai-model-btn ${aiModel === 'sarvam' ? 'active-sarvam' : ''}`}
+        onClick={() => setAiModel('sarvam')}
+        title="Sarvam AI — Multilingual Indian language support"
+    >
+        🇮🇳 Sarvam
+    </button>
+    <button
+        type="button"
+        className={`ai-model-btn ${aiModel === 'groq' ? 'active-groq' : ''}`}
+        onClick={() => setAiModel('groq')}
+        title="Groq AI — Faster responses"
+    >
+        ⚡ Groq
+    </button>
+</div>
+
                         <select value={language} onChange={(e) => setLanguage(e.target.value)} className="lang-select form-select form-select-sm">
                             {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
                         </select>
+
                         <button
                             className={`icon-btn btn d-flex align-items-center justify-content-center ${autoSpeak ? 'autospeak-on' : ''}`}
                             onClick={() => setAutoSpeak((v) => !v)}
@@ -277,134 +300,154 @@ export default function Chat() {
                         </button>
                     </div>
                 </div>
+            
 
-                {/* Messages */}
-                <div className="messages-area p-3 d-flex flex-column gap-3">
-                    {messages.length === 0 ? (
-                        <div className="d-flex flex-column align-items-center justify-content-center flex-grow-1 text-center p-5 gap-3">
-                            <div className="welcome-icon d-flex align-items-center justify-content-center">🙏</div>
-                            <h5 className="welcome-title mb-0">Namaste, {userPhone}!</h5>
-                            <p className="welcome-sub mb-0">
-                                Type or <strong>speak</strong> your message in any Indian language.
-                            </p>
-                            <div className="d-flex flex-wrap gap-2 justify-content-center">
-                                {SUGGESTIONS.map((sg) => (
-                                    <button key={sg} className="chip btn px-3 py-2" onClick={() => handleSend(sg)}>{sg}</button>
-                                ))}
-                            </div>
+            {/* Messages */}
+            <div className="messages-area p-3 d-flex flex-column gap-3">
+                {messages.length === 0 ? (
+                    <div className="d-flex flex-column align-items-center justify-content-center flex-grow-1 text-center p-5 gap-3">
+                        <div className="welcome-icon d-flex align-items-center justify-content-center">🙏</div>
+                        <h5 className="welcome-title mb-0">Namaste, {userPhone}!</h5>
+                        <p className="welcome-sub mb-0">
+                            Type or <strong>speak</strong> your message in any Indian language.
+                        </p>
+                        {/* ✅ NEW: AI Model Status Badge in Welcome Screen */}
+                        <div className="mt-2">
+                            <span className={`badge ${aiModel === 'sarvam' ? 'bg-primary' : 'bg-success'} p-2`}>
+                                {aiModel === 'sarvam' ? '🇮🇳' : '⚡'} Using {aiModel.toUpperCase()} AI
+                            </span>
+                            <span className="text-muted ms-2 small">
+                                {aiModel === 'sarvam' ? '• Multilingual' : '• Fast responses'}
+                            </span>
                         </div>
-                    ) : (
-                        <>
-                            {messages.map((m, i) => (
-                                <div key={i} className={`d-flex gap-2 align-items-end ${m.role === 'user' ? 'justify-content-end' : 'justify-content-start'}`}>
-                                    {m.role === 'assistant' && (
-                                        <div className="avatar-bot d-flex align-items-center justify-content-center">🤖</div>
-                                    )}
-                                    <div>
-                                        {/* <div className={`${m.role === 'user' ? 'bubble-user' : 'bubble-bot'} px-3 py-2`}>
+                        <div className="d-flex flex-wrap gap-2 justify-content-center">
+                            {SUGGESTIONS.map((sg) => (
+                                <button key={sg} className="chip btn px-3 py-2" onClick={() => handleSend(sg)}>{sg}</button>
+                            ))}
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        {messages.map((m, i) => (
+                            <div key={i} className={`d-flex gap-2 align-items-end ${m.role === 'user' ? 'justify-content-end' : 'justify-content-start'}`}>
+                                {m.role === 'assistant' && (
+                                    <div className="avatar-bot d-flex align-items-center justify-content-center">🤖</div>
+                                )}
+                                <div>
+                                    {/* <div className={`${m.role === 'user' ? 'bubble-user' : 'bubble-bot'} px-3 py-2`}>
                                             {m.text}
                                         </div> */}
-                                        {/* ✅ New - renders markdown */}
-<div className={`${m.role === 'user' ? 'bubble-user' : 'bubble-bot'} px-3 py-2`}>
-    {m.role === 'assistant'
-        ? <ReactMarkdown>{m.text}</ReactMarkdown>
-        : m.text
-    }
-</div>
-                                        <div className={`d-flex align-items-center gap-2 mt-1 ${m.role === 'user' ? 'justify-content-end' : 'justify-content-start'}`}>
-                                            {m.time && <span className="msg-time">{m.time}</span>}
-                                            {m.role === 'assistant' && (
-                                                <button className="speak-btn" onClick={() => speaking ? stopSpeaking() : playTextAsAudio(m.text)} title="Listen">
-                                                    <i className={`bi ${speaking ? 'bi-stop-fill' : 'bi-volume-up'}`} />
-                                                </button>
-                                            )}
-                                        </div>
+                                    {/* ✅ New - renders markdown */}
+                                    <div className={`${m.role === 'user' ? 'bubble-user' : 'bubble-bot'} px-3 py-2`}>
+                                        {m.role === 'assistant'
+                                            ? <ReactMarkdown>{m.text}</ReactMarkdown>
+                                            : m.text
+                                        }
                                     </div>
-                                    {m.role === 'user' && (
-                                        <div className="avatar-user d-flex align-items-center justify-content-center">
-                                            {userRole === 'admin' ? '👑' : '👤'}
-                                        </div>
-                                    )}
+                                    <div className={`d-flex align-items-center gap-2 mt-1 ${m.role === 'user' ? 'justify-content-end' : 'justify-content-start'}`}>
+                                        {m.time && <span className="msg-time">{m.time}</span>}
+                                        {m.role === 'assistant' && (
+                                            <button className="speak-btn" onClick={() => speaking ? stopSpeaking() : playTextAsAudio(m.text)} title="Listen">
+                                                <i className={`bi ${speaking ? 'bi-stop-fill' : 'bi-volume-up'}`} />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
-                            ))}
+                                {m.role === 'user' && (
+                                    <div className="avatar-user d-flex align-items-center justify-content-center">
+                                        {userRole === 'admin' ? '👑' : '👤'}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
 
-                            {loading && (
-                                <div className="d-flex gap-2 align-items-end justify-content-start">
-                                    <div className="avatar-bot d-flex align-items-center justify-content-center">🤖</div>
-                                    <div className="bubble-bot d-flex gap-1 align-items-center px-3 py-2">
-                                        <span className="typing-dot" style={{ animationDelay: '0s' }} />
-                                        <span className="typing-dot" style={{ animationDelay: '0.2s' }} />
-                                        <span className="typing-dot" style={{ animationDelay: '0.4s' }} />
-                                    </div>
+                        {loading && (
+                            <div className="d-flex gap-2 align-items-end justify-content-start">
+                                <div className="avatar-bot d-flex align-items-center justify-content-center">🤖</div>
+                                <div className="bubble-bot d-flex gap-1 align-items-center px-3 py-2">
+                                    <span className="typing-dot" style={{ animationDelay: '0s' }} />
+                                    <span className="typing-dot" style={{ animationDelay: '0.2s' }} />
+                                    <span className="typing-dot" style={{ animationDelay: '0.4s' }} />
+                                    {/* ✅ NEW: Show which AI model is responding */}
+                                    <span className="ms-1 small text-muted">
+                                        {aiModel === 'sarvam' ? 'Sarvam AI' : 'Groq AI'}
+                                    </span>
                                 </div>
-                            )}
-                        </>
-                    )}
-                    <div ref={messagesEndRef} />
+                            </div>
+                        )}
+                    </>
+                )}
+                <div ref={messagesEndRef} />
+            </div>
+
+            {/* Error */}
+            {error && (
+                <div className="error-bar mx-3 mb-2 px-3 py-2 text-center">
+                    <i className="bi bi-exclamation-circle me-2" />{error}
                 </div>
+            )}
 
-                {/* Error */}
-                {error && (
-                    <div className="error-bar mx-3 mb-2 px-3 py-2 text-center">
-                        <i className="bi bi-exclamation-circle me-2" />{error}
+            {/* Input Area */}
+            <div className="input-area p-3">
+                {/* Voice status */}
+                {(recording || transcribing || speaking) && (
+                    <div className="voice-status d-flex align-items-center gap-2 p-2 mb-2">
+                        {recording && <><span className="rec-dot" /> Recording… tap mic to stop</>}
+                        {transcribing && <><i className="bi bi-hourglass-split" /> Transcribing…</>}
+                        {speaking && (
+                            <><i className="bi bi-volume-up" /> Speaking…
+                                <button className="stop-btn ms-1" onClick={stopSpeaking}>Stop</button>
+                            </>
+                        )}
                     </div>
                 )}
 
-                {/* Input Area */}
-                <div className="input-area p-3">
-                    {/* Voice status */}
-                    {(recording || transcribing || speaking) && (
-                        <div className="voice-status d-flex align-items-center gap-2 p-2 mb-2">
-                            {recording    && <><span className="rec-dot" /> Recording… tap mic to stop</>}
-                            {transcribing && <><i className="bi bi-hourglass-split" /> Transcribing…</>}
-                            {speaking     && (
-                                <><i className="bi bi-volume-up" /> Speaking…
-                                    <button className="stop-btn ms-1" onClick={stopSpeaking}>Stop</button>
-                                </>
-                            )}
-                        </div>
-                    )}
+                {/* Input row */}
+                <div className="input-wrap d-flex align-items-end gap-2 p-2">
+                    <button
+                        className={`mic-btn d-flex align-items-center justify-content-center ${recording ? 'recording' : ''}`}
+                        onClick={toggleRecording}
+                        disabled={transcribing || loading}
+                        title={recording ? 'Stop recording' : 'Start voice input'}
+                    >
+                        {transcribing
+                            ? <i className="bi bi-hourglass-split" />
+                            : recording
+                                ? <i className="bi bi-stop-fill" />
+                                : <i className="bi bi-mic-fill" />}
+                    </button>
 
-                    {/* Input row */}
-                    <div className="input-wrap d-flex align-items-end gap-2 p-2">
-                        <button
-                            className={`mic-btn d-flex align-items-center justify-content-center ${recording ? 'recording' : ''}`}
-                            onClick={toggleRecording}
-                            disabled={transcribing || loading}
-                            title={recording ? 'Stop recording' : 'Start voice input'}
-                        >
-                            {transcribing
-                                ? <i className="bi bi-hourglass-split" />
-                                : recording
-                                    ? <i className="bi bi-stop-fill" />
-                                    : <i className="bi bi-mic-fill" />}
-                        </button>
+                    <textarea
+                        rows={1}
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={handleKey}
+                        placeholder={recording ? 'Listening…' : `Type or speak your message (${aiModel.toUpperCase()})…`}
+                        className="chat-input"
+                    />
 
-                        <textarea
-                            rows={1}
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyDown={handleKey}
-                            placeholder={recording ? 'Listening…' : 'Type or speak your message…'}
-                            className="chat-input"
-                        />
-
-                        <button
-                            className="send-btn d-flex align-items-center justify-content-center"
-                            onClick={() => handleSend()}
-                            disabled={loading || !input.trim()}
-                        >
-                            <i className="bi bi-send-fill" />
-                        </button>
-                    </div>
-
-                    <p className="input-hint text-center mt-2 mb-0">
-                        <i className="bi bi-mic me-1" />Tap mic to speak ·
-                        <i className="bi bi-volume-up mx-1" />Toggle auto-speak ·
-                        Supports 10+ Indian languages
-                    </p>
+                    {/* ✅ CHANGED: Dynamic button color based on AI model */}
+                    <button
+                        className={`send-btn d-flex align-items-center justify-content-center ${aiModel === 'groq' ? 'btn-success' : ''}`}
+                        onClick={() => handleSend()}
+                        disabled={loading || !input.trim()}
+                        style={aiModel === 'groq' ? { backgroundColor: '#28a745', borderColor: '#28a745' } : {}}
+                    >
+                        <i className="bi bi-send-fill" />
+                    </button>
                 </div>
+
+                <p className="input-hint text-center mt-2 mb-0">
+                    <i className="bi bi-mic me-1" />Tap mic to speak ·
+                    <i className="bi bi-volume-up mx-1" />Toggle auto-speak ·
+                    Supports 10+ Indian languages
+                    <span className={`ms-1 fw-bold ${aiModel === 'groq' ? 'text-success' : 'text-primary'}`}>
+                        {aiModel.toUpperCase()}
+                    </span>
+                </p>
             </div>
+               
+        </div>
         </div>
     );
 }

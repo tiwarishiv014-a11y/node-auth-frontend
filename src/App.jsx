@@ -4,6 +4,7 @@ import Login        from './pages/Login';
 import Dashboard    from './pages/Dashboard';
 import Profile      from './pages/Profile';           // ← ADD
 import Chat         from './pages/Chat';
+import PdfChat      from './pages/PdfChat';
 import PrivateRoute from './components/PrivateRoute';
 
 function App() {
@@ -29,6 +30,11 @@ function App() {
                <Route path="/chat" element={
                     <PrivateRoute>
                         <Chat />
+                    </PrivateRoute>
+                } />
+               <Route path="/pdf-chat" element={
+                    <PrivateRoute>
+                        <PdfChat />
                     </PrivateRoute>
                 } />
             </Routes>

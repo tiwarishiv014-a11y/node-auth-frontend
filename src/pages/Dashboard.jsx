@@ -391,7 +391,7 @@ function Dashboard() {
                     )}
                 </div>
                 {/* ── Floating AI Chat Button ── */}
-<div className="text-center mt-4 mb-4">
+<div className="text-center mt-4 mb-4 d-flex justify-content-center gap-3 flex-wrap">
     <button
         className="btn btn-lg px-5 py-3"
         onClick={() => navigate('/chat')}
@@ -407,6 +407,22 @@ function Dashboard() {
     >
         <i className="bi bi-chat-dots-fill me-2" />
         Open AI Chat
+    </button>
+    <button
+        className="btn btn-lg px-5 py-3"
+        onClick={() => navigate('/pdf-chat')}
+        style={{
+            background: 'linear-gradient(135deg, #f97316, #ef4444)',
+            border: 'none',
+            borderRadius: '50px',
+            color: 'white',
+            fontWeight: '700',
+            fontSize: '16px',
+            boxShadow: '0 8px 24px rgba(239,68,68,0.4)',
+        }}
+    >
+        <i className="bi bi-file-earmark-pdf-fill me-2" />
+        PDF Chat
     </button>
 </div>
             </div>

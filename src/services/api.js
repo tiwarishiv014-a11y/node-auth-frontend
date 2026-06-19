@@ -106,17 +106,19 @@ export const uploadPicture = async (file, token) => {
 
 
 // ── Sarvam Chat APIs ─────────────────────────────────────────
-export const sendChatMessage = async (message, language, token, chatId = null) => {
+export const sendChatMessage = async (message, language, token, chatId = null, aiModel ='sarvam') => {
     const res = await fetch(`${import.meta.env.VITE_API_URL}/api/chat`, {
+    // const res = await fetch(`${API}/chat`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body:    JSON.stringify({ message, language, chatId }),
+        body:    JSON.stringify({ message, language, chatId, aiModel }),
     });
     return res.json();
 };
 
 export const getChatSessions = async (token) => {
     const res = await fetch(`${import.meta.env.VITE_API_URL}/api/chat/sessions`, {
+    // const res = await fetch(`${API}/chat/sessions`, {
         headers: { Authorization: `Bearer ${token}` },
     });
     return res.json();
@@ -124,6 +126,7 @@ export const getChatSessions = async (token) => {
 
 export const getChatSession = async (chatId, token) => {
     const res = await fetch(`${import.meta.env.VITE_API_URL}/api/chat/${chatId}`, {
+    // const res = await fetch(`${API}/chat/${chatId}`, {
         headers: { Authorization: `Bearer ${token}` },
     });
     return res.json();
@@ -131,6 +134,7 @@ export const getChatSession = async (chatId, token) => {
 
 export const deleteChatSession = async (chatId, token) => {
     const res = await fetch(`${import.meta.env.VITE_API_URL}/api/chat/${chatId}`, {
+    // const res = await fetch(`${API}/chat/${chatId}`, {
         method:  'DELETE',
         headers: { Authorization: `Bearer ${token}` },
     });
@@ -139,6 +143,7 @@ export const deleteChatSession = async (chatId, token) => {
 
 export const clearAllChats = async (token) => {
     const res = await fetch(`${import.meta.env.VITE_API_URL}/api/chat/clear/all`, {
+    // const res = await fetch(`${API}/chat/clear/all`, {
         method:  'DELETE',
         headers: { Authorization: `Bearer ${token}` },
     });
@@ -150,6 +155,7 @@ export const transcribeAudio = async (audioBlob, language, token) => {
     formData.append('audio', audioBlob, 'audio.webm');
     formData.append('language', language);
     const res = await fetch(`${import.meta.env.VITE_API_URL}/api/voice/transcribe`, {
+    // const res = await fetch(`${API}/voice/transcribe`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -160,6 +166,7 @@ export const transcribeAudio = async (audioBlob, language, token) => {
 // Send text → get base64 audio back
 export const speakText = async (text, language, token) => {
     const res = await fetch(`${import.meta.env.VITE_API_URL}/api/voice/speak`, {
+    // const res = await fetch(`${API}/voice/speak`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body:    JSON.stringify({ text, language }),
@@ -167,15 +174,57 @@ export const speakText = async (text, language, token) => {
     return res.json();
 };
 
-// Missing in your file — add these:
+// ── PDF Chat API ─────────────────────────────────────────────
 
+export const uploadPdf = async (file) => {
+    console.log('uploadPdf called', file);  
+    const formData = new FormData();
+    formData.append('pdf', file);
 
+          
 
-// export const updateUserStatus = async (phone, status, token) => {
-//     const res = await fetch(`${API}/admin/status`, {
-//         method:  'POST',
-//         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-//         body:    JSON.stringify({ phone, status })
-//     });
-//     return res.json();
-// };
+    const token = localStorage.getItem('token');
+    // console.log('Token:', token);  // 👈 check token exists
+    // console.log('Fetching:', `${API}/pdf/upload`);  
+const res = await fetch(`${import.meta.env.VITE_API_URL}/api/pdf/upload`, {
+    // const res = await fetch(`${API}/pdf/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+    });
+    return res.json();
+};
+
+export const chatWithPdf = async (question, docId) => {
+    const token = localStorage.getItem('token');
+    // console.log('Token:', token);  // 👈 check token exists
+   const res = await fetch(`${import.meta.env.VITE_API_URL}/api/pdf/chat`, {
+    // const res = await fetch(`${API}/pdf/chat`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ question, docId }),
+    });
+    return res.json();
+};
+
+export const listPdfs = async () => {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/pdf/list`, {
+    // const res = await fetch(`${API}/pdf/list`, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.json();
+};
+
+export const deletePdf = async (id) => {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/pdf/${id}`, {
+    // const res = await fetch(`${API}/pdf/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.json();
+};

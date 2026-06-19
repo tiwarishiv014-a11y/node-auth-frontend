@@ -1040,3 +1040,764 @@ html, body, #root {
     margin-bottom: 4px;
     line-height: 1.6;
 }
+
+/* // css for model selector in chat page */
+
+.ai-model-toggle {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.ai-model-btn {
+    border: none;
+    background: transparent;
+    color: #aaa;
+    font-size: 0.8rem;
+    padding: 4px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.ai-model-btn:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.active-sarvam {
+    background: #0d6efd;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(13, 110, 253, 0.4);
+}
+
+.active-groq {
+    background: #198754;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(25, 135, 84, 0.4);
+}
+
+/* ═══════════════════════════════════════════════
+   PDF CHAT PAGE
+═══════════════════════════════════════════════ */
+/* ── PDF CHAT PAGE ── */
+.pdf-chat-page {
+    height: 100vh;
+    width: 100vw;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(145deg, #0a0a1a 0%, #12122a 100%);
+    position: fixed;
+    top: 0;
+    left: 0;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+}
+
+/* ── Header ── */
+.pdf-chat-header {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 20px 32px;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pdf-chat-header h2 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin: 0;
+    background: linear-gradient(135deg, #e2e8f0 0%, #94a3b8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.pdf-chat-header h2::before {
+    content: '📄';
+    -webkit-text-fill-color: initial;
+    filter: drop-shadow(0 0 20px rgba(99, 102, 241, 0.3));
+}
+
+.pdf-chat-header p {
+    color: rgba(148, 163, 184, 0.5);
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 400;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ── Upload Box ── */
+.pdf-upload-box {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    padding: 16px 20px;
+    margin: 0 32px 20px 32px;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+}
+
+.pdf-upload-box:hover {
+    border-color: rgba(99, 102, 241, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.pdf-file-input {
+    flex: 1;
+    color: #94a3b8;
+    font-size: 0.9rem;
+    background: transparent;
+    border: none;
+    outline: none;
+    min-width: 0;
+    cursor: pointer;
+}
+
+.pdf-file-input::file-selector-button {
+    background: rgba(99, 102, 241, 0.12);
+    color: #e2e8f0;
+    border: 1px solid rgba(99, 102, 241, 0.15);
+    padding: 8px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    margin-right: 14px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.pdf-file-input::file-selector-button:hover {
+    background: rgba(99, 102, 241, 0.2);
+    border-color: rgba(99, 102, 241, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+}
+
+.pdf-file-input::file-selector-button:active {
+    transform: translateY(0);
+}
+
+.btn-upload {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff;
+    border: none;
+    padding: 10px 28px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-upload:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(99, 102, 241, 0.3);
+}
+
+.btn-upload:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.btn-upload:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-upload:disabled::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+/* ── Filename Badge ── */
+.pdf-filename-badge {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(15, 52, 96, 0.3);
+    border: 1px solid rgba(99, 102, 241, 0.15);
+    color: #7dd3fc;
+    padding: 6px 16px 6px 14px;
+    border-radius: 30px;
+    font-size: 0.85rem;
+    flex: 1;
+    min-width: 150px;
+    animation: fadeSlideIn 0.3s ease;
+}
+
+@keyframes fadeSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.pdf-filename-badge::before {
+    content: '📎';
+    font-size: 16px;
+}
+
+.btn-reset {
+    background: rgba(248, 113, 113, 0.1);
+    border: 1px solid rgba(248, 113, 113, 0.15);
+    color: #f87171;
+    cursor: pointer;
+    font-size: 0.75rem;
+    padding: 4px 12px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    margin-left: auto;
+    font-weight: 500;
+}
+
+.btn-reset:hover {
+    background: rgba(248, 113, 113, 0.2);
+    border-color: rgba(248, 113, 113, 0.3);
+    transform: scale(1.05);
+}
+
+/* ── Error ── */
+.pdf-error {
+    background: rgba(45, 27, 27, 0.5);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: #f87171;
+    border: 1px solid rgba(127, 29, 29, 0.3);
+    border-radius: 12px;
+    padding: 12px 18px;
+    margin: 0 32px 16px 32px;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ── Chat Window ── */
+.pdf-chat-window {
+    flex: 1;
+    min-height: 0;
+    margin: 0 32px 16px 32px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 20px 24px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scroll-behavior: smooth;
+}
+
+.pdf-chat-window::-webkit-scrollbar {
+    width: 4px;
+}
+
+.pdf-chat-window::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.pdf-chat-window::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.3);
+    border-radius: 10px;
+}
+
+.pdf-chat-window::-webkit-scrollbar-thumb:hover {
+    background: rgba(99, 102, 241, 0.5);
+}
+
+.pdf-chat-empty {
+    color: rgba(148, 163, 184, 0.3);
+    text-align: center;
+    margin: auto;
+    font-size: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.pdf-chat-empty::before {
+    content: '👆';
+    font-size: 48px;
+    opacity: 0.5;
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+}
+
+/* ── Messages ── */
+.pdf-msg {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-width: 80%;
+    animation: messageIn 0.3s ease;
+}
+
+@keyframes messageIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.pdf-msg--user {
+    align-self: flex-end;
+    align-items: flex-end;
+}
+
+.pdf-msg--ai,
+.pdf-msg--system {
+    align-self: flex-start;
+    align-items: flex-start;
+}
+
+.pdf-msg-label {
+    font-size: 0.7rem;
+    color: rgba(148, 163, 184, 0.4);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 0 4px;
+}
+
+.pdf-msg-text {
+    padding: 12px 18px;
+    border-radius: 16px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    word-wrap: break-word;
+}
+
+.pdf-msg--user .pdf-msg-text {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.15);
+}
+
+.pdf-msg--ai .pdf-msg-text {
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(10px);
+    color: #e2e8f0;
+    border-bottom-left-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.pdf-msg--system .pdf-msg-text {
+    background: rgba(15, 52, 96, 0.2);
+    color: #7dd3fc;
+    border-bottom-left-radius: 4px;
+    border: 1px solid rgba(99, 102, 241, 0.1);
+    font-size: 0.85rem;
+}
+
+.pdf-msg-text code {
+    background: rgba(181, 166, 166, 0.632);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.pdf-msg-text pre {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 8px 0;
+}
+
+/* ── Typing Indicator ── */
+.pdf-typing {
+    display: flex;
+    gap: 6px;
+    padding: 14px 20px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    align-self: flex-start;
+    animation: messageIn 0.3s ease;
+}
+
+.pdf-typing span {
+    width: 8px;
+    height: 8px;
+    background: #6366f1;
+    border-radius: 50%;
+    animation: pdfBounce 1.2s infinite;
+}
+
+.pdf-typing span:nth-child(2) { animation-delay: 0.2s; }
+.pdf-typing span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes pdfBounce {
+    0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+    40%           { transform: translateY(-8px); opacity: 1; }
+}
+
+/* ── Input Row ── */
+.pdf-input-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    padding: 0 32px 24px 32px;
+    flex-shrink: 0;
+}
+
+.pdf-question-input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.03);
+    color: #e2e8f0;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+    padding: 12px 18px;
+    font-size: 0.9rem;
+    resize: none;
+    outline: none;
+    transition: all 0.3s ease;
+    min-height: 48px;
+    max-height: 120px;
+    line-height: 1.5;
+    font-family: inherit;
+}
+
+.pdf-question-input:focus {
+    border-color: rgba(99, 102, 241, 0.4);
+    background: rgba(255, 255, 255, 0.05);
+    box-shadow: 0 0 30px rgba(99, 102, 241, 0.05);
+}
+
+.pdf-question-input::placeholder {
+    color: rgba(148, 163, 184, 0.3);
+}
+
+.pdf-question-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-ask {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff;
+    border: none;
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.2);
+}
+
+.btn-ask:hover:not(:disabled) {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 30px rgba(99, 102, 241, 0.3);
+}
+
+.btn-ask:active:not(:disabled) {
+    transform: translateY(0) scale(0.98);
+}
+
+.btn-ask:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ── Responsive Design ── */
+@media (max-width: 768px) {
+    .pdf-chat-header {
+        padding: 16px 20px;
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+    }
+
+    .pdf-chat-header h2 {
+        font-size: 1.3rem;
+    }
+
+    .pdf-upload-box {
+        margin: 0 16px 16px 16px;
+        padding: 14px 16px;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .pdf-file-input {
+        width: 100%;
+        font-size: 0.8rem;
+    }
+
+    .pdf-file-input::file-selector-button {
+        padding: 6px 16px;
+        font-size: 0.8rem;
+    }
+
+    .btn-upload {
+        width: 100%;
+        justify-content: center;
+        padding: 10px;
+    }
+
+    .pdf-filename-badge {
+        width: 100%;
+        font-size: 0.8rem;
+    }
+
+    .pdf-error {
+        margin: 0 16px 12px 16px;
+        font-size: 0.85rem;
+    }
+
+    .pdf-chat-window {
+        margin: 0 16px 12px 16px;
+        padding: 16px;
+    }
+
+    .pdf-msg {
+        max-width: 90%;
+    }
+
+    .pdf-msg-text {
+        font-size: 0.85rem;
+        padding: 10px 14px;
+    }
+
+    .pdf-input-row {
+        padding: 0 16px 16px 16px;
+        gap: 10px;
+    }
+
+    .pdf-question-input {
+        font-size: 0.85rem;
+        padding: 10px 14px;
+        min-height: 44px;
+    }
+
+    .btn-ask {
+        width: 46px;
+        height: 46px;
+        font-size: 1rem;
+        border-radius: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .pdf-chat-header {
+        padding: 12px 16px;
+    }
+
+    .pdf-chat-header h2 {
+        font-size: 1.1rem;
+    }
+
+    .pdf-chat-header p {
+        font-size: 0.75rem;
+        padding: 4px 12px;
+    }
+
+    .pdf-upload-box {
+        margin: 0 12px 12px 12px;
+        padding: 12px 14px;
+        gap: 10px;
+    }
+
+    .pdf-file-input {
+        font-size: 0.75rem;
+    }
+
+    .pdf-file-input::file-selector-button {
+        padding: 4px 12px;
+        font-size: 0.75rem;
+    }
+
+    .btn-upload {
+        font-size: 0.8rem;
+        padding: 8px;
+    }
+
+    .pdf-chat-window {
+        margin: 0 12px 10px 12px;
+        padding: 12px;
+        border-radius: 12px;
+    }
+
+    .pdf-chat-empty {
+        font-size: 0.85rem;
+    }
+
+    .pdf-chat-empty::before {
+        font-size: 36px;
+    }
+
+    .pdf-msg-text {
+        font-size: 0.8rem;
+        padding: 8px 12px;
+        border-radius: 12px;
+    }
+
+    .pdf-input-row {
+        padding: 0 12px 12px 12px;
+        gap: 8px;
+    }
+
+    .pdf-question-input {
+        font-size: 0.8rem;
+        padding: 8px 12px;
+        min-height: 40px;
+        border-radius: 12px;
+    }
+
+    .btn-ask {
+        width: 40px;
+        height: 40px;
+        font-size: 0.9rem;
+        border-radius: 12px;
+    }
+}
+
+/* ── Header  for pdfchat ── */
+/* ── Header ── */
+.pdf-chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 12px 32px;
+    flex-shrink: 0;
+}
+
+.pdf-chat-header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.logo-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.2));
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    border: 1px solid rgba(99, 102, 241, 0.15);
+    flex-shrink: 0;
+}
+
+.pdf-chat-header-left .header-text {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+}
+
+.pdf-chat-header-left h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin: 0;
+    background: linear-gradient(135deg, #e2e8f0 0%, #94a3b8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.5px;
+}
+
+.pdf-chat-header-left p {
+    color: rgba(148, 163, 184, 0.4);
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 400;
+}
+
+.pdf-chat-header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.back-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(148, 163, 184, 0.7);
+    padding: 6px 16px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.back-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(99, 102, 241, 0.3);
+    color: #e2e8f0;
+}
