@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   getDashboard, updateUserStatus, deleteUser, getUserDetail, logoutUser,
   getAiChatLogs, getPdfChatLogs, banUser, unbanUser, resetUserOtp,
-  getUserChats, getUserPdfs, API_BASE
+  getUserChats, getUserPdfs
 } from '../services/api';
 import Sidebar from '../components/Sidebar';
 
