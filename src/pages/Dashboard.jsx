@@ -389,7 +389,7 @@ export default function Dashboard() {
                     <>
                       <div className="text-center mb-3">
                         {selectedUser.profilePicture ? (
-                          <img src={`${API_BASE}/${selectedUser.profilePicture}`} alt="Profile" className="dash-avatar-img" />
+                          <img src={`${import.meta.env.VITE_API_URL}/${selectedUser.profilePicture}`} alt="Profile" className="dash-avatar-img" />
                         ) : (
                           <div className="dash-avatar">
                             {selectedUser.name ? selectedUser.name[0].toUpperCase() : '?'}
