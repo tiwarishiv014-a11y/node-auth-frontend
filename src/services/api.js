@@ -1,5 +1,9 @@
+// export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// const API = `${API_BASE}/api`;
+
 // const API = 'http://localhost:3000/api';
 const API = `${import.meta.env.VITE_API_URL}/api`;
+
 
 export const registerUser = async (formData) => {
     const res  = await fetch(`${API}/register`, {
@@ -102,7 +106,29 @@ export const uploadPicture = async (file, token) => {
     });
     return res.json();
 };
+// ── Admin Log APIs ────────────────────────────────────────
 
+export const getAiChatLogs = async (token) => {
+    const res = await fetch(`${API}/admin/logs/ai`, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        return { success: false, error: data.message || data.error || 'Failed to fetch AI logs' };
+    }
+    return { success: true, logs: data.logs || [] };
+};
+
+export const getPdfChatLogs = async (token) => {
+    const res = await fetch(`${API}/admin/logs/pdf`, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        return { success: false, error: data.message || data.error || 'Failed to fetch PDF logs' };
+    }
+    return { success: true, logs: data.logs || [] };
+};
 
 
 // ── Sarvam Chat APIs ─────────────────────────────────────────
@@ -117,7 +143,7 @@ export const sendChatMessage = async (message, language, token, chatId = null, a
 };
 
 export const getChatSessions = async (token) => {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/chat/sessions`, {
+     const res = await fetch(`${import.meta.env.VITE_API_URL}/api/chat/sessions`, {
     // const res = await fetch(`${API}/chat/sessions`, {
         headers: { Authorization: `Bearer ${token}` },
     });
@@ -142,7 +168,7 @@ export const deleteChatSession = async (chatId, token) => {
 };
 
 export const clearAllChats = async (token) => {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/chat/clear/all`, {
+     const res = await fetch(`${import.meta.env.VITE_API_URL}/api/chat/sessions`, {
     // const res = await fetch(`${API}/chat/clear/all`, {
         method:  'DELETE',
         headers: { Authorization: `Bearer ${token}` },
@@ -186,7 +212,7 @@ export const uploadPdf = async (file) => {
     const token = localStorage.getItem('token');
     // console.log('Token:', token);  // 👈 check token exists
     // console.log('Fetching:', `${API}/pdf/upload`);  
-const res = await fetch(`${import.meta.env.VITE_API_URL}/api/pdf/upload`, {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/pdf/upload`, {
     // const res = await fetch(`${API}/pdf/upload`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
@@ -198,7 +224,7 @@ const res = await fetch(`${import.meta.env.VITE_API_URL}/api/pdf/upload`, {
 export const chatWithPdf = async (question, docId) => {
     const token = localStorage.getItem('token');
     // console.log('Token:', token);  // 👈 check token exists
-   const res = await fetch(`${import.meta.env.VITE_API_URL}/api/pdf/chat`, {
+   const res = await fetch(`${import.meta.env.VITE_API_URL}/api/pdf/chat`, { 
     // const res = await fetch(`${API}/pdf/chat`, {
         method: 'POST',
         headers: {
@@ -224,6 +250,55 @@ export const deletePdf = async (id) => {
     const res = await fetch(`${import.meta.env.VITE_API_URL}/api/pdf/${id}`, {
     // const res = await fetch(`${API}/pdf/${id}`, {
         method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.json();
+};
+
+// ── Admin High Impact Actions ─────────────────────────────
+
+export const banUser = async (phone, reason, token) => {
+    const res = await fetch(`${API}/admin/ban`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ phone, reason }),
+    });
+    return res.json();
+};
+
+export const unbanUser = async (phone, token) => {
+    const res = await fetch(`${API}/admin/unban`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ phone }),
+    });
+    return res.json();
+};
+
+export const resetUserOtp = async (phone, token) => {
+    const res = await fetch(`${API}/admin/reset-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ phone }),
+    });
+    return res.json();
+};
+
+export const getUserChats = async (userId, token) => {
+    const res = await fetch(`${API}/admin/user-chats/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.json();
+};
+
+export const getUserPdfs = async (userId, token) => {
+    const res = await fetch(`${API}/admin/user-pdfs/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.json();
+};
+export const getAdminInsights = async (token) => {
+    const res = await fetch(`${API}/admin/insights`, {
         headers: { Authorization: `Bearer ${token}` },
     });
     return res.json();

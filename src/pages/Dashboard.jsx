@@ -1,434 +1,644 @@
-// src/pages/Dashboard.jsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getDashboard, updateUserStatus, deleteUser, getUserDetail, logoutUser } from '../services/api';
-// import './Dashboard.css';
-// import './App.css';
+import {
+  getDashboard, updateUserStatus, deleteUser, getUserDetail, logoutUser,
+  getAiChatLogs, getPdfChatLogs, banUser, unbanUser, resetUserOtp,
+  getUserChats, getUserPdfs, API_BASE
+} from '../services/api';
+import Sidebar from '../components/Sidebar';
 
-function Dashboard() {
-    const [data,         setData]         = useState(null);
-    const [loading,      setLoading]      = useState(true);
-    const [error,        setError]        = useState('');
-    const [search,       setSearch]       = useState('');
-    const [filter,       setFilter]       = useState('all');
-    const [roleFilter,   setRoleFilter]   = useState('all');
-    const [page,         setPage]         = useState(1);
-    const [selectedUser, setSelectedUser] = useState(null);
-    const [detailLoad,   setDetailLoad]   = useState(false);
+const PURPLE = '#7c6af7';
+const VIOLET = '#c084fc';
+const PINK = '#f472b6';
+const GREEN = '#34d399';
+const YELLOW = '#fbbf24';
+const RED = '#f87171';
+const DARK = '#0f0f1a';
+const BORDER = '#2a2a4a';
 
-    const PERPAGE  = 5;
-    const token    = localStorage.getItem('token');
-    const navigate = useNavigate();
+export default function Dashboard() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [page, setPage] = useState(1);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [detailLoad, setDetailLoad] = useState(false);
+  const [panelTab, setPanelTab] = useState('info');
+  const [panelLoad, setPanelLoad] = useState(false);
+  const [userChats, setUserChats] = useState([]);
+  const [userPdfs, setUserPdfs] = useState([]);
+  const [chatPage, setChatPage] = useState(1);
+  const [expandedChat, setExpandedChat] = useState(null);
+  const [banReason, setBanReason] = useState('');
+  const [banModal, setBanModal] = useState(false);
+  const [actionUser, setActionUser] = useState(null);
+  const [aiLogs, setAiLogs] = useState([]);
+  const [pdfLogs, setPdfLogs] = useState([]);
+  const [logsTab, setLogsTab] = useState(null);
+  const [logsLoad, setLogsLoad] = useState(false);
+  const [logsError, setLogsError] = useState('');
+  const [activeSection, setActiveSection] = useState('users');
 
-    useEffect(() => { loadData(); }, []);
+  const PERPAGE = 5;
+  const token = localStorage.getItem('token');
+  const navigate = useNavigate();
 
-    const loadData = async () => {
-        setLoading(true);
-        try {
-            const res = await getDashboard(token);
-            setData(res);
-        } catch {
-            setError('Cannot load dashboard');
-        } finally {
-            setLoading(false);
-        }
-    };
+  useEffect(() => {
+    loadData();
+    fetchLogs();
+  }, []);
 
-    const handleLogout = async () => {
-        await logoutUser(token);
-        localStorage.clear();
-        navigate('/login');
-    };
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const res = await getDashboard(token);
+      setData(res);
+    } catch { setError('Cannot load dashboard'); }
+    finally { setLoading(false); }
+  };
 
-    const handleStatus = async (phone, status) => {
-        await updateUserStatus(phone, status, token);
-        loadData();
-        if (selectedUser?.phone === phone) setSelectedUser(prev => ({ ...prev, status }));
-    };
+  const fetchLogs = async () => {
+    if (!token) return;
+    setLogsLoad(true);
+    setLogsError('');
+    try {
+      const [aiRes, pdfRes] = await Promise.all([
+        getAiChatLogs(token),
+        getPdfChatLogs(token),
+      ]);
+      if (aiRes.success) setAiLogs(aiRes.logs);
+      else setLogsError(aiRes.error || 'Failed to load AI logs');
 
-    const handleDelete = async (phone) => {
-        if (!window.confirm(`Delete user ${phone}?`)) return;
-        await deleteUser(phone, token);
-        setSelectedUser(null);
-        loadData();
-    };
+      if (pdfRes.success) setPdfLogs(pdfRes.logs);
+      else setLogsError(prev => prev || pdfRes.error || 'Failed to load PDF logs');
+    } catch {
+      setLogsError('Cannot reach server. Check that the backend is running.');
+    } finally {
+      setLogsLoad(false);
+    }
+  };
 
-    const handleView = async (phone) => {
-        setDetailLoad(true);
-        const res = await getUserDetail(phone, token);
-        setSelectedUser(res.user);
-        setDetailLoad(false);
-    };
+  const openLogsTab = (tab) => {
+    setLogsTab(tab);
+    fetchLogs();
+  };
 
-    const exportCSV = () => {
-        const headers = ['Phone', 'Name', 'Email', 'Role', 'Status', 'Joined'];
-        const rows    = data.users.map(u => [
-            u.phone, u.name || '', u.email || '',
-            u.role, u.status, u.createdAt?.slice(0,10) || ''
-        ]);
-        const csv  = [headers, ...rows].map(r => r.join(',')).join('\n');
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement('a');
-        a.href     = url;
-        a.download = 'users.csv';
-        a.click();
-    };
+  const handleLogout = async () => {
+    await logoutUser(token);
+    localStorage.clear();
+    navigate('/login');
+  };
 
-    if (loading) return (
-        <div className="d-flex align-items-center justify-content-center" style={{ minHeight:'100vh' }}>
-            <div className="text-center">
-                <div className="spinner-border text-primary mb-3" />
-                <p className="text-muted">Loading dashboard...</p>
+  const handleStatus = async (phone, status) => {
+    await updateUserStatus(phone, status, token);
+    loadData();
+    if (selectedUser?.phone === phone) setSelectedUser(prev => ({ ...prev, status }));
+  };
+
+  const handleDelete = async (phone) => {
+    if (!window.confirm(`Delete user ${phone}?`)) return;
+    await deleteUser(phone, token);
+    setSelectedUser(null);
+    loadData();
+  };
+
+  const handleView = async (phone) => {
+    setDetailLoad(true);
+    setPanelTab('info');
+    setUserChats([]);
+    setUserPdfs([]);
+    setChatPage(1);
+    setExpandedChat(null);
+    const res = await getUserDetail(phone, token);
+    setSelectedUser(res.user);
+    setDetailLoad(false);
+  };
+
+  const handleBan = async () => {
+    const res = await banUser(actionUser.phone, banReason, token);
+    if (res.success) {
+      alert('✅ User banned');
+      setBanModal(false);
+      setBanReason('');
+      loadData();
+      if (selectedUser?.phone === actionUser.phone)
+        setSelectedUser(prev => ({ ...prev, isBanned: true }));
+    }
+  };
+
+  const handleUnban = async (phone) => {
+    const res = await unbanUser(phone, token);
+    if (res.success) {
+      alert('✅ User unbanned');
+      loadData();
+      if (selectedUser?.phone === phone)
+        setSelectedUser(prev => ({ ...prev, isBanned: false }));
+    }
+  };
+
+  const handleResetOtp = async (phone) => {
+    if (!window.confirm(`Reset OTP for ${phone}?`)) return;
+    const res = await resetUserOtp(phone, token);
+    alert(res.success ? '✅ OTP reset' : '❌ Failed');
+  };
+
+  const handlePanelTab = async (tab) => {
+    setPanelTab(tab);
+    if (tab === 'chats' && userChats.length === 0) {
+      setPanelLoad(true);
+      const res = await getUserChats(selectedUser._id, token);
+      if (res.success) setUserChats(res.chats);
+      setPanelLoad(false);
+    }
+    if (tab === 'pdfs' && userPdfs.length === 0) {
+      setPanelLoad(true);
+      const res = await getUserPdfs(selectedUser._id, token);
+      if (res.success) setUserPdfs(res.pdfs);
+      setPanelLoad(false);
+    }
+  };
+
+  const exportCSV = () => {
+    const headers = ['Phone', 'Name', 'Email', 'Role', 'Status', 'Joined'];
+    const rows = data.users.map(u => [
+      u.phone, u.name || '', u.email || '',
+      u.role, u.status, u.createdAt?.slice(0, 10) || ''
+    ]);
+    const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'users.csv'; a.click();
+  };
+
+  if (loading) return (
+    <div style={{ minHeight: '100vh', background: DARK, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="text-center text-white">
+        <div className="spinner-border mb-3" style={{ color: PURPLE }} />
+        <p style={{ color: '#888' }}>Loading dashboard...</p>
+      </div>
+    </div>
+  );
+
+  if (error) return (
+    <div className="container mt-5">
+      <div className="alert alert-danger">{error}</div>
+    </div>
+  );
+
+  const filtered = data.users.filter(u => {
+    if (filter !== 'all' && u.status !== filter) return false;
+    if (roleFilter !== 'all' && u.role !== roleFilter) return false;
+    if (search && !u.phone.includes(search) &&
+      !(u.name || '').toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  const totalPages = Math.ceil(filtered.length / PERPAGE);
+  const paginated = filtered.slice((page - 1) * PERPAGE, page * PERPAGE);
+
+  return (
+    <div className="dash-root">
+      <Sidebar
+        activeSection={activeSection}
+        setActiveSection={setActiveSection}
+        handleLogout={handleLogout}
+      />
+
+      <main className="dash-main">
+        <header className="dash-topbar">
+          <div>
+            <h1 className="dash-page-title">👥 User Management</h1>
+            <p className="dash-page-sub">
+              Welcome back, {localStorage.getItem('name') || localStorage.getItem('phone')}
+            </p>
+          </div>
+          <div className="d-flex gap-2">
+            <button className="dash-icon-btn" onClick={loadData} title="Refresh">
+              <i className="bi bi-arrow-clockwise" />
+            </button>
+          </div>
+        </header>
+
+        <div className="dash-metrics">
+          {[
+            { label: 'Total Users', value: data.metrics.total, color: PURPLE, icon: '👥', filter: 'all' },
+            { label: 'Pending', value: data.metrics.pending, color: YELLOW, icon: '⏳', filter: 'pending' },
+            { label: 'Approved', value: data.metrics.approved, color: GREEN, icon: '✅', filter: 'approved' },
+            { label: 'Rejected', value: data.metrics.rejected, color: RED, icon: '❌', filter: 'rejected' },
+            { label: 'AI Logs', value: aiLogs.length, color: VIOLET, icon: '🤖', filter: null, logsType: 'ai' },
+            { label: 'PDF Logs', value: pdfLogs.length, color: PINK, icon: '📄', filter: null, logsType: 'pdf' },
+          ].map(m => (
+            <div
+              key={m.label}
+              className="dash-metric-card"
+              onClick={() => {
+                if (m.filter) { setFilter(m.filter); setPage(1); }
+                else if (m.logsType) openLogsTab(m.logsType);
+              }}
+              style={{ cursor: (m.filter || m.logsType) ? 'pointer' : 'default' }}
+            >
+              <div className="dash-metric-icon" style={{ background: m.color + '22', color: m.color }}>
+                {m.icon}
+              </div>
+              <div>
+                <div className="dash-metric-value" style={{ color: m.color }}>{m.value}</div>
+                <div className="dash-metric-label">{m.label}</div>
+              </div>
             </div>
+          ))}
         </div>
-    );
 
-    if (error) return (
-        <div className="container mt-5">
-            <div className="alert alert-danger">{error}</div>
-        </div>
-    );
+        <div className="dash-section" style={{ paddingTop: 0 }}>
+          <div className="d-flex gap-2 mb-3">
+            <button className="dash-log-btn purple" onClick={() => openLogsTab('ai')}>
+              🤖 AI Logs <span className="dash-log-count">{aiLogs.length}</span>
+            </button>
+            <button className="dash-log-btn pink" onClick={() => openLogsTab('pdf')}>
+              📄 PDF Logs <span className="dash-log-count">{pdfLogs.length}</span>
+            </button>
+          </div>
 
-    const filtered = data.users.filter(u => {
-        if (filter     !== 'all' && u.status !== filter)     return false;
-        if (roleFilter !== 'all' && u.role   !== roleFilter) return false;
-        if (search && !u.phone.includes(search) &&
-            !(u.name || '').toLowerCase().includes(search.toLowerCase())) return false;
-        return true;
-    });
+          <div className="row g-3">
+            <div className={selectedUser ? 'col-md-7' : 'col-12'}>
+              <div className="dash-filter-bar">
+                <input
+                  className="dash-input"
+                  placeholder="🔍 Search phone or name..."
+                  value={search}
+                  onChange={e => { setSearch(e.target.value); setPage(1); }}
+                />
+                <select className="dash-select" value={filter} onChange={e => { setFilter(e.target.value); setPage(1); }}>
+                  <option value="all">All Status</option>
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+                <select className="dash-select" value={roleFilter} onChange={e => { setRoleFilter(e.target.value); setPage(1); }}>
+                  <option value="all">All Roles</option>
+                  <option value="user">User</option>
+                  <option value="admin">Admin</option>
+                </select>
+                <button className="dash-icon-btn ms-auto" onClick={exportCSV} title="Export CSV">
+                  <i className="bi bi-download" />
+                </button>
+              </div>
 
-    const totalPages = Math.ceil(filtered.length / PERPAGE);
-    const paginated  = filtered.slice((page - 1) * PERPAGE, page * PERPAGE);
+              <p className="dash-result-count">
+                {paginated.length} of {filtered.length} users
+                {filter !== 'all' && ` · ${filter}`}
+              </p>
 
-    const metrics = [
-        { label: 'Total',    value: data.metrics.total,    color: 'primary', cls: 'total'    },
-        { label: 'Pending',  value: data.metrics.pending,  color: 'warning', cls: 'pending'  },
-        { label: 'Approved', value: data.metrics.approved, color: 'success', cls: 'approved' },
-        { label: 'Rejected', value: data.metrics.rejected, color: 'danger',  cls: 'rejected' },
-    ];
-
-    return (
-        <div className="dashboard-page">
-
-            {/* ── Navbar ── */}
-            <nav className="navbar dashboard-navbar">
-                <span className="navbar-brand">🛡️ Admin Dashboard</span>
-                <div className="d-flex align-items-center gap-2">
-                    <span className="nav-user-info">
-                        👤 {localStorage.getItem('name') || localStorage.getItem('phone')}
-                    </span>
-                    <button className="btn btn-sm btn-outline-light" onClick={() => navigate('/profile')}>
-                        <i className="bi bi-person me-1" />Profile
-                    </button>
-                    {/* <button className="btn btn-sm btn-outline-warning" onClick={() => navigate('/chat')}>
-                        <i className="bi bi-chat-dots me-1" />AI Chat
-                    </button> */}
-                    <button className="btn btn-sm btn-outline-light" onClick={handleLogout}>
-                        <i className="bi bi-box-arrow-right me-1" />Logout
-                    </button>
-                </div>
-            </nav>
-
-            <div className="container-fluid px-4 py-4">
-
-                {/* ── Metric Cards ── */}
-                <div className="row mb-4">
-                    {metrics.map(m => (
-                        <div className="col-6 col-md-3 mb-3" key={m.label}>
-                            <div
-                                className={`card metric-card ${m.cls}`}
-                                onClick={() => { setFilter(m.label.toLowerCase()); setPage(1); }}
-                            >
-                                <div className="card-body text-center py-3">
-                                    <div className={`metric-value text-${m.color}`}>{m.value}</div>
-                                    <div className="metric-label">{m.label}</div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-
-                <div className="row">
-
-                    {/* ── Table Column ── */}
-                    <div className={selectedUser ? 'col-md-7' : 'col-12'}>
-
-                        {/* Filter Bar */}
-                        <div className="filter-bar d-flex gap-2 flex-wrap align-items-center">
-                            <input
-                                className="form-control"
-                                style={{ maxWidth: 220 }}
-                                placeholder="🔍 Search phone or name..."
-                                value={search}
-                                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                            />
-                            <select
-                                className="form-select"
-                                style={{ maxWidth: 140 }}
-                                value={filter}
-                                onChange={(e) => { setFilter(e.target.value); setPage(1); }}
-                            >
-                                <option value="all">All Status</option>
-                                <option value="pending">Pending</option>
-                                <option value="approved">Approved</option>
-                                <option value="rejected">Rejected</option>
-                            </select>
-                            <select
-                                className="form-select"
-                                style={{ maxWidth: 130 }}
-                                value={roleFilter}
-                                onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
-                            >
-                                <option value="all">All Roles</option>
-                                <option value="user">User</option>
-                                <option value="admin">Admin</option>
-                            </select>
-                            <button className="btn btn-outline-secondary" onClick={loadData} title="Refresh">
-                                <i className="bi bi-arrow-clockwise" />
+              <div className="dash-table-wrap">
+                <table className="dash-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Phone</th>
+                      <th>Name</th>
+                      <th>Role</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginated.length === 0 ? (
+                      <tr>
+                        <td colSpan="6" className="text-center py-4" style={{ color: '#555' }}>
+                          No users found
+                        </td>
+                      </tr>
+                    ) : paginated.map((u, i) => (
+                      <tr key={u.phone} className={selectedUser?.phone === u.phone ? 'active-row' : ''}>
+                        <td style={{ color: '#555' }}>{(page - 1) * PERPAGE + i + 1}</td>
+                        <td className="phone-cell">{u.phone}</td>
+                        <td>{u.name || <span style={{ color: '#555' }}>—</span>}</td>
+                        <td>
+                          <span className={`dash-badge ${u.role === 'admin' ? 'badge-red' : 'badge-gray'}`}>
+                            {u.role}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`dash-badge ${
+                            u.status === 'approved' ? 'badge-green' :
+                            u.status === 'pending' ? 'badge-yellow' : 'badge-red'
+                          }`}>
+                            {u.status}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="d-flex gap-1 flex-wrap">
+                            <button className="dash-action-btn info" onClick={() => handleView(u.phone)}>
+                              <i className="bi bi-eye" />
                             </button>
-                            <button className="btn btn-outline-success export-btn ms-auto" onClick={exportCSV}>
-                                <i className="bi bi-download me-1" />Export CSV
-                            </button>
-                        </div>
-
-                        {/* Result count */}
-                        <p className="result-count mb-2">
-                            Showing {paginated.length} of {filtered.length} users
-                            {filter !== 'all' && ` — filtered by: ${filter}`}
-                        </p>
-
-                        {/* Table */}
-                        <div className="users-table-wrap">
-                            <div className="table-responsive">
-                                <table className="table users-table table-hover align-middle">
-                                    <thead>
-                                        <tr>
-                                            <th>#</th>
-                                            <th>Phone</th>
-                                            <th>Name</th>
-                                            <th>Role</th>
-                                            <th>Status</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {paginated.length === 0 ? (
-                                            <tr className="empty-row">
-                                                <td colSpan="6" className="text-center py-4">
-                                                    <i className="bi bi-inbox fs-4 d-block mb-2 text-muted" />
-                                                    No users found
-                                                </td>
-                                            </tr>
-                                        ) : paginated.map((u, i) => (
-                                            <tr key={u.phone} className={selectedUser?.phone === u.phone ? 'row-active' : ''}>
-                                                <td className="text-muted">{(page-1)*PERPAGE + i + 1}</td>
-                                                <td className="phone-cell">{u.phone}</td>
-                                                <td>{u.name || <span className="text-muted">—</span>}</td>
-                                                <td>
-                                                    <span className={`role-badge badge bg-${u.role === 'admin' ? 'danger' : 'secondary'}`}>
-                                                        {u.role}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <span className={`status-badge badge bg-${
-                                                        u.status === 'approved' ? 'success' :
-                                                        u.status === 'pending'  ? 'warning' : 'danger'
-                                                    }`}>
-                                                        {u.status}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <div className="d-flex gap-1 flex-wrap">
-                                                        <button className="btn btn-sm btn-info text-white action-btn" onClick={() => handleView(u.phone)}>
-                                                            <i className="bi bi-eye me-1" />View
-                                                        </button>
-                                                        {u.status === 'pending' && (
-                                                            <>
-                                                                <button className="btn btn-sm btn-success action-btn" onClick={() => handleStatus(u.phone, 'approved')}>
-                                                                    <i className="bi bi-check-lg" />
-                                                                </button>
-                                                                <button className="btn btn-sm btn-warning action-btn" onClick={() => handleStatus(u.phone, 'rejected')}>
-                                                                    <i className="bi bi-x-lg" />
-                                                                </button>
-                                                            </>
-                                                        )}
-                                                        <button className="btn btn-sm btn-danger action-btn" onClick={() => handleDelete(u.phone)}>
-                                                            <i className="bi bi-trash3" />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {/* Pagination */}
-                            {totalPages > 1 && (
-                                <div className="pagination-wrap d-flex justify-content-between align-items-center">
-                                    <small className="text-muted">Page {page} of {totalPages}</small>
-                                    <div className="d-flex gap-1">
-                                        <button className="btn btn-sm btn-outline-secondary" onClick={() => setPage(1)} disabled={page === 1}>«</button>
-                                        <button className="btn btn-sm btn-outline-secondary" onClick={() => setPage(p => p-1)} disabled={page === 1}>‹</button>
-                                        {Array.from({ length: totalPages }, (_, i) => i+1).map(p => (
-                                            <button
-                                                key={p}
-                                                className={`btn btn-sm ${page === p ? 'btn-primary' : 'btn-outline-secondary'}`}
-                                                onClick={() => setPage(p)}
-                                            >{p}</button>
-                                        ))}
-                                        <button className="btn btn-sm btn-outline-secondary" onClick={() => setPage(p => p+1)} disabled={page === totalPages}>›</button>
-                                        <button className="btn btn-sm btn-outline-secondary" onClick={() => setPage(totalPages)} disabled={page === totalPages}>»</button>
-                                    </div>
-                                </div>
+                            {u.status === 'pending' && (
+                              <>
+                                <button className="dash-action-btn success" onClick={() => handleStatus(u.phone, 'approved')}>
+                                  <i className="bi bi-check-lg" />
+                                </button>
+                                <button className="dash-action-btn warning" onClick={() => handleStatus(u.phone, 'rejected')}>
+                                  <i className="bi bi-x-lg" />
+                                </button>
+                              </>
                             )}
-                        </div>
-                    </div>
+                            <button className="dash-action-btn danger" onClick={() => handleDelete(u.phone)}>
+                              <i className="bi bi-trash3" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-                    {/* ── User Detail Panel ── */}
-                    {selectedUser && (
-                        <div className="col-md-5">
-                            <div className="card detail-card">
-                                <div className="card-body">
-
-                                    {/* Header */}
-                                    <div className="d-flex justify-content-between align-items-center mb-3">
-                                        <span className="detail-header">
-                                            <i className="bi bi-person-circle me-2 text-primary" />User Detail
-                                        </span>
-                                        <button className="btn btn-sm btn-outline-secondary" onClick={() => setSelectedUser(null)}>
-                                            <i className="bi bi-x-lg" />
-                                        </button>
-                                    </div>
-
-                                    {detailLoad ? (
-                                        <div className="text-center py-4">
-                                            <div className="spinner-border spinner-border-sm text-primary" />
-                                        </div>
-                                    ) : (
-                                        <>
-                                            {/* Avatar */}
-                                            <div className="text-center mb-3">
-                                                {selectedUser.profilePicture ? (
-                                                    <img
-                                                        src={`http://localhost:3000/${selectedUser.profilePicture}`}
-                                                        alt="Profile"
-                                                        className="detail-avatar-img"
-                                                    />
-                                                ) : (
-                                                    <div className="detail-avatar-placeholder">
-                                                        {selectedUser.name ? selectedUser.name[0].toUpperCase() : '?'}
-                                                    </div>
-                                                )}
-                                                <div className="detail-name">{selectedUser.name || '—'}</div>
-                                                <div className="detail-phone">{selectedUser.phone}</div>
-                                            </div>
-
-                                            {/* Fields */}
-                                            {[
-                                                { label: 'Phone',   value: selectedUser.phone   },
-                                                { label: 'Name',    value: selectedUser.name    },
-                                                { label: 'Email',   value: selectedUser.email   },
-                                                { label: 'Address', value: selectedUser.address },
-                                                { label: 'Gender',  value: selectedUser.gender  },
-                                                { label: 'Role',    value: selectedUser.role    },
-                                                { label: 'Status',  value: selectedUser.status  },
-                                                { label: 'Joined',  value: selectedUser.createdAt?.slice(0,10) },
-                                            ].map(f => (
-                                                <div className="detail-row" key={f.label}>
-                                                    <span className="detail-label">{f.label}</span>
-                                                    <span className="detail-value">{f.value || '—'}</span>
-                                                </div>
-                                            ))}
-
-                                            {/* Activity Log */}
-                                            <div className="activity-title">
-                                                <i className="bi bi-clock-history me-1" />Activity Log
-                                            </div>
-                                            {selectedUser.activityLog?.length ? (
-                                                <div className="activity-log">
-                                                    {[...selectedUser.activityLog].reverse().slice(0,10).map((log, i) => (
-                                                        <div key={i} className="activity-row">
-                                                            <span className={`badge bg-${
-                                                                log.action === 'login'       ? 'success' :
-                                                                log.action === 'otp_request' ? 'primary' :
-                                                                log.action === 'otp_failed'  ? 'warning' : 'secondary'
-                                                            }`}>
-                                                                {log.action}
-                                                            </span>
-                                                            <span className="activity-time">
-                                                                {new Date(log.timestamp).toLocaleString()}
-                                                            </span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <p className="text-muted" style={{ fontSize:12 }}>No activity yet</p>
-                                            )}
-
-                                            {/* Actions */}
-                                            <div className="d-flex gap-2 mt-3">
-                                                {selectedUser.status === 'pending' && (
-                                                    <>
-                                                        <button className="btn btn-success btn-sm" onClick={() => handleStatus(selectedUser.phone, 'approved')}>
-                                                            <i className="bi bi-check-lg me-1" />Approve
-                                                        </button>
-                                                        <button className="btn btn-warning btn-sm" onClick={() => handleStatus(selectedUser.phone, 'rejected')}>
-                                                            <i className="bi bi-x-lg me-1" />Reject
-                                                        </button>
-                                                    </>
-                                                )}
-                                                <button className="btn btn-danger btn-sm" onClick={() => handleDelete(selectedUser.phone)}>
-                                                    <i className="bi bi-trash3 me-1" />Delete
-                                                </button>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    )}
+              {totalPages > 1 && (
+                <div className="dash-pagination">
+                  <small style={{ color: '#555' }}>Page {page} of {totalPages}</small>
+                  <div className="d-flex gap-1">
+                    <button className="dash-page-btn" onClick={() => setPage(1)} disabled={page === 1}>«</button>
+                    <button className="dash-page-btn" onClick={() => setPage(p => p - 1)} disabled={page === 1}>‹</button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                      <button key={p} className={`dash-page-btn ${page === p ? 'active' : ''}`} onClick={() => setPage(p)}>{p}</button>
+                    ))}
+                    <button className="dash-page-btn" onClick={() => setPage(p => p + 1)} disabled={page === totalPages}>›</button>
+                    <button className="dash-page-btn" onClick={() => setPage(totalPages)} disabled={page === totalPages}>»</button>
+                  </div>
                 </div>
-                {/* ── Floating AI Chat Button ── */}
-<div className="text-center mt-4 mb-4 d-flex justify-content-center gap-3 flex-wrap">
-    <button
-        className="btn btn-lg px-5 py-3"
-        onClick={() => navigate('/chat')}
-        style={{
-            background: 'linear-gradient(135deg, #7c6af7, #c084fc)',
-            border: 'none',
-            borderRadius: '50px',
-            color: 'white',
-            fontWeight: '700',
-            fontSize: '16px',
-            boxShadow: '0 8px 24px rgba(124,106,247,0.4)',
-        }}
-    >
-        <i className="bi bi-chat-dots-fill me-2" />
-        Open AI Chat
-    </button>
-    <button
-        className="btn btn-lg px-5 py-3"
-        onClick={() => navigate('/pdf-chat')}
-        style={{
-            background: 'linear-gradient(135deg, #f97316, #ef4444)',
-            border: 'none',
-            borderRadius: '50px',
-            color: 'white',
-            fontWeight: '700',
-            fontSize: '16px',
-            boxShadow: '0 8px 24px rgba(239,68,68,0.4)',
-        }}
-    >
-        <i className="bi bi-file-earmark-pdf-fill me-2" />
-        PDF Chat
-    </button>
-</div>
+              )}
             </div>
-            
-        </div>
-    );
-}
 
-export default Dashboard;
+            {selectedUser && (
+              <div className="col-md-5">
+                <div className="dash-panel">
+                  <div className="dash-panel-header">
+                    <span>User Detail</span>
+                    <button className="dash-icon-btn" onClick={() => setSelectedUser(null)}>
+                      <i className="bi bi-x-lg" />
+                    </button>
+                  </div>
+
+                  {detailLoad ? (
+                    <div className="text-center py-4">
+                      <div className="spinner-border spinner-border-sm" style={{ color: PURPLE }} />
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-center mb-3">
+                        {selectedUser.profilePicture ? (
+                          <img src={`${API_BASE}/${selectedUser.profilePicture}`} alt="Profile" className="dash-avatar-img" />
+                        ) : (
+                          <div className="dash-avatar">
+                            {selectedUser.name ? selectedUser.name[0].toUpperCase() : '?'}
+                          </div>
+                        )}
+                        <div className="dash-user-name">{selectedUser.name || '—'}</div>
+                        <div className="dash-user-phone">{selectedUser.phone}</div>
+                        {selectedUser.isBanned && <span className="dash-badge badge-red mt-1">🚫 Banned</span>}
+                      </div>
+
+                      <div className="dash-tabs">
+                        {['info', 'activity', 'chats', 'pdfs'].map(tab => (
+                          <button
+                            key={tab}
+                            className={`dash-tab ${panelTab === tab ? 'active' : ''}`}
+                            onClick={() => handlePanelTab(tab)}
+                          >
+                            {tab === 'info' && '👤'}
+                            {tab === 'activity' && '📋'}
+                            {tab === 'chats' && '💬'}
+                            {tab === 'pdfs' && '📄'}
+                            <span className="ms-1 text-capitalize">{tab}</span>
+                          </button>
+                        ))}
+                      </div>
+
+                      {panelTab === 'info' && (
+                        <>
+                          {[
+                            { label: 'Phone', value: selectedUser.phone },
+                            { label: 'Name', value: selectedUser.name },
+                            { label: 'Email', value: selectedUser.email },
+                            { label: 'Address', value: selectedUser.address },
+                            { label: 'Gender', value: selectedUser.gender },
+                            { label: 'Role', value: selectedUser.role },
+                            { label: 'Status', value: selectedUser.status },
+                            { label: 'Joined', value: selectedUser.createdAt?.slice(0, 10) },
+                          ].map(f => (
+                            <div className="dash-field-row" key={f.label}>
+                              <span className="dash-field-label">{f.label}</span>
+                              <span className="dash-field-value">{f.value || '—'}</span>
+                            </div>
+                          ))}
+                          {selectedUser.isBanned && (
+                            <div className="dash-alert-danger">🚫 {selectedUser.banReason}</div>
+                          )}
+                          <div className="d-flex gap-2 mt-3 flex-wrap">
+                            {selectedUser.status === 'pending' && (
+                              <>
+                                <button className="dash-btn success" onClick={() => handleStatus(selectedUser.phone, 'approved')}>✅ Approve</button>
+                                <button className="dash-btn warning" onClick={() => handleStatus(selectedUser.phone, 'rejected')}>❌ Reject</button>
+                              </>
+                            )}
+                            <button className="dash-btn danger" onClick={() => handleDelete(selectedUser.phone)}>🗑 Delete</button>
+                            <button className="dash-btn gray" onClick={() => handleResetOtp(selectedUser.phone)}>🔄 Reset OTP</button>
+                            {selectedUser.isBanned ? (
+                              <button className="dash-btn success" onClick={() => handleUnban(selectedUser.phone)}>🔓 Unban</button>
+                            ) : (
+                              <button className="dash-btn danger" onClick={() => { setActionUser(selectedUser); setBanModal(true); }}>🚫 Ban</button>
+                            )}
+                          </div>
+                        </>
+                      )}
+
+                      {panelTab === 'activity' && (
+                        <div className="dash-activity">
+                          {selectedUser.activityLog?.length ? (
+                            [...selectedUser.activityLog].reverse().slice(0, 10).map((log, i) => (
+                              <div key={i} className="dash-activity-row">
+                                <span className={`dash-badge ${
+                                  log.action === 'login' ? 'badge-green' :
+                                  log.action === 'otp_request' ? 'badge-purple' :
+                                  log.action === 'otp_failed' ? 'badge-yellow' : 'badge-gray'
+                                }`}>{log.action}</span>
+                                <span className="dash-activity-time">{new Date(log.timestamp).toLocaleString()}</span>
+                              </div>
+                            ))
+                          ) : <p style={{ color: '#555', fontSize: 12 }}>No activity yet</p>}
+                        </div>
+                      )}
+
+                      {panelTab === 'chats' && (
+                        <>
+                          {panelLoad ? (
+                            <div className="text-center py-3"><div className="spinner-border spinner-border-sm" style={{ color: PURPLE }} /></div>
+                          ) : userChats.length === 0 ? (
+                            <p style={{ color: '#555' }} className="text-center py-3">No chats found</p>
+                          ) : (
+                            <>
+                              {userChats.slice((chatPage - 1) * 5, chatPage * 5).map((chat, i) => (
+                                <div key={i} className="dash-chat-item">
+                                  <div className="d-flex justify-content-between align-items-center">
+                                    <span className="dash-badge badge-purple">{chat.aiModel || 'sarvam'}</span>
+                                    <div className="d-flex gap-1 align-items-center">
+                                      <small style={{ color: '#555', fontSize: 10 }}>{new Date(chat.updatedAt).toLocaleDateString()}</small>
+                                      <button
+                                        className="dash-expand-btn"
+                                        onClick={() => setExpandedChat(expandedChat === i ? null : i)}
+                                      >{expandedChat === i ? '▲' : '▼'}</button>
+                                    </div>
+                                  </div>
+                                  {expandedChat !== i ? (
+                                    <small style={{ fontSize: 11, color: '#aaa' }}>
+                                      🧑 {chat.messages[0]?.content}
+                                    </small>
+                                  ) : (
+                                    <div style={{ maxHeight: 250, overflowY: 'auto', marginTop: 6 }}>
+                                      {chat.messages.map((msg, j) => (
+                                        <div key={j} className={`dash-msg ${msg.role}`}>
+                                          <span className={`dash-badge ${msg.role === 'user' ? 'badge-purple' : 'badge-gray'}`}>
+                                            {msg.role === 'user' ? '🧑' : '🤖'}
+                                          </span>
+                                          <small style={{ fontSize: 11 }}>{msg.content}</small>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  <small style={{ color: '#555', fontSize: 10 }}>{chat.messages.length} messages</small>
+                                </div>
+                              ))}
+                              {userChats.length > 5 && (
+                                <div className="d-flex justify-content-between align-items-center mt-2">
+                                  <small style={{ color: '#555' }}>{chatPage}/{Math.ceil(userChats.length / 5)}</small>
+                                  <div className="d-flex gap-1">
+                                    <button className="dash-page-btn" onClick={() => setChatPage(p => p - 1)} disabled={chatPage === 1}>‹</button>
+                                    <button className="dash-page-btn" onClick={() => setChatPage(p => p + 1)} disabled={chatPage === Math.ceil(userChats.length / 5)}>›</button>
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </>
+                      )}
+
+                      {panelTab === 'pdfs' && (
+                        <>
+                          {panelLoad ? (
+                            <div className="text-center py-3"><div className="spinner-border spinner-border-sm" style={{ color: PURPLE }} /></div>
+                          ) : userPdfs.length === 0 ? (
+                            <p style={{ color: '#555' }} className="text-center py-3">No PDFs found</p>
+                          ) : userPdfs.map((pdf, i) => (
+                            <div key={i} className="dash-chat-item">
+                              <div className="d-flex justify-content-between">
+                                <span style={{ fontSize: 12 }}>📄 {pdf.filename}</span>
+                                <small style={{ color: '#555', fontSize: 10 }}>{new Date(pdf.createdAt).toLocaleDateString()}</small>
+                              </div>
+                              <small style={{ color: '#555', fontSize: 10 }}>{pdf.chunks?.length} chunks · {pdf.chatHistory?.length} Q&As</small>
+                              {pdf.chatHistory?.slice(0, 2).map((h, j) => (
+                                <div key={j} className="mt-1 pt-1" style={{ borderTop: `1px solid ${BORDER}` }}>
+                                  <small style={{ color: '#7dd3fc', fontSize: 11 }}>Q: {h.question}</small><br />
+                                  <small style={{ color: '#888', fontSize: 11 }}>A: {h.answer?.substring(0, 80)}...</small>
+                                </div>
+                              ))}
+                            </div>
+                          ))}
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+
+      {/* Logs Modal */}
+      {logsTab && (
+        <div className="dash-modal-overlay">
+          <div className="dash-modal">
+            <div className="dash-modal-header">
+              <h5>{logsTab === 'ai' ? '🤖 AI Chat Logs' : '📄 PDF Chat Logs'}</h5>
+              <button className="dash-icon-btn" onClick={() => setLogsTab(null)}>✕</button>
+            </div>
+            <div className="dash-modal-body">
+              {logsError && (
+                <div className="dash-alert-danger mb-3">{logsError}</div>
+              )}
+              {logsLoad ? (
+                <div className="text-center py-3"><div className="spinner-border spinner-border-sm" style={{ color: PURPLE }} /></div>
+              ) : logsTab === 'ai' ? (
+                <table className="dash-table">
+                  <thead><tr><th>User</th><th>Message</th><th>Response</th><th>Model</th><th>Time</th></tr></thead>
+                  <tbody>
+                    {aiLogs.length === 0 ? (
+                      <tr><td colSpan="5" className="text-center" style={{ color: '#555' }}>No logs yet</td></tr>
+                    ) : aiLogs.map((log, i) => (
+                      <tr key={i}>
+                        <td><small>{log.user?.name || 'Unknown'}<br /><span style={{ color: '#888' }}>{log.user?.phone}</span></small></td>
+                        <td style={{ maxWidth: 200 }}><small className="text-truncate d-block">{log.message}</small></td>
+                        <td style={{ maxWidth: 200 }}><small className="text-truncate d-block">{log.response}</small></td>
+                        <td><span className="dash-badge badge-purple">{log.model}</span></td>
+                        <td><small style={{ color: '#888' }}>{new Date(log.createdAt || log.timestamp).toLocaleString()}</small></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <table className="dash-table">
+                  <thead><tr><th>User</th><th>File</th><th>Question</th><th>Answer</th><th>Time</th></tr></thead>
+                  <tbody>
+                    {pdfLogs.length === 0 ? (
+                      <tr><td colSpan="5" className="text-center" style={{ color: '#555' }}>No logs yet</td></tr>
+                    ) : pdfLogs.map((log, i) => (
+                      <tr key={i}>
+                        <td><small>{log.user?.name || 'Unknown'}<br /><span style={{ color: '#888' }}>{log.user?.phone}</span></small></td>
+                        <td><small style={{ color: '#888' }}>{log.filename}</small></td>
+                        <td style={{ maxWidth: 200 }}><small className="text-truncate d-block">{log.question}</small></td>
+                        <td style={{ maxWidth: 200 }}><small className="text-truncate d-block">{log.answer}</small></td>
+                        <td><small style={{ color: '#888' }}>{new Date(log.createdAt || log.timestamp).toLocaleString()}</small></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <div className="dash-modal-footer">
+              <small style={{ color: '#888' }}>{logsTab === 'ai' ? aiLogs.length : pdfLogs.length} logs</small>
+              <button className="dash-btn gray" onClick={fetchLogs}>🔄 Refresh</button>
+              <button className="dash-btn gray" onClick={() => setLogsTab(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Ban Modal */}
+      {banModal && (
+        <div className="dash-modal-overlay">
+          <div className="dash-modal" style={{ maxWidth: 420 }}>
+            <div className="dash-modal-header">
+              <h5>🚫 Ban User — {actionUser?.phone}</h5>
+              <button className="dash-icon-btn" onClick={() => setBanModal(false)}>✕</button>
+            </div>
+            <div className="dash-modal-body">
+              <label className="dash-label">Reason for ban</label>
+              <input
+                className="dash-input"
+                placeholder="e.g. Spam, abuse..."
+                value={banReason}
+                onChange={e => setBanReason(e.target.value)}
+              />
+            </div>
+            <div className="dash-modal-footer">
+              <button className="dash-btn gray" onClick={() => setBanModal(false)}>Cancel</button>
+              <button className="dash-btn danger" onClick={handleBan}>Confirm Ban</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
