@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { registerUser } from "../services/api";
+import { Link, useNavigate } from 'react-router-dom';
 // import "./Register.css";
 
 function Register() {
@@ -16,6 +17,8 @@ function Register() {
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
+     const navigate = useNavigate();
+
 
     const handleChange = (e) => {
         setForm({ ...form, [e.target.name]: e.target.value });
@@ -56,7 +59,7 @@ function Register() {
 
                 <div className="register-left">
                     <div className="brand-content">
-                        <h1>Node Auth System</h1>
+                        <h1>Full-Stack AI Chat Platform</h1>
                         <p>
                             Secure authentication platform with JWT,
                             MongoDB, React and Voice AI integration.
@@ -145,7 +148,12 @@ function Register() {
                         >
                             {loading ? "Registering..." : "Create Account"}
                         </button>
+<div className="login-divider">or</div>
 
+                            <p className="register-link">
+                                already have an account?{' '}
+                                <Link to="/login">login here</Link>
+                            </p>
                     </div>
                 </div>
 
