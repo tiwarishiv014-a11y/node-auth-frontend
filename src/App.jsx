@@ -1,6 +1,7 @@
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import Register     from './pages/Register';
 import Login        from './pages/Login';
+
 import Dashboard    from './pages/Dashboard';
 import Analytics    from './pages/Analytics';      // ← ADD
 import Insights     from './pages/Insights';       // ← ADD
@@ -15,6 +16,7 @@ function App() {
             <Routes>
                 <Route path="/"          element={<Login />} />
                 <Route path="/login"     element={<Login />} />
+               
                 <Route path="/register"  element={<Register />} />
 
                 <Route path="/profile" element={

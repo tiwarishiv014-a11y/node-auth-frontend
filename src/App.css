@@ -3,18 +3,92 @@
    Covers: Login · Register · Profile · Dashboard · Chat
    ============================================================ */
 
-
 /* ============================================================
-   SECTION 1 — LOGIN PAGE
+   SECTION 1 — LOGIN PAGE (enhanced)
    ============================================================ */
 
 .login-page {
     min-height: 100vh;
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    background:
+        radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1.5px),
+        linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    background-size: 26px 26px, 100% 100%;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* soft floating glow accents on the dark backdrop */
+.login-page::before,
+.login-page::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(2px);
+    pointer-events: none;
+    animation: floatBlob 9s ease-in-out infinite;
+}
+
+.login-page::before {
+    width: 360px;
+    height: 360px;
+    top: -100px;
+    left: -100px;
+    background: radial-gradient(circle, rgba(124,106,247,0.18), transparent 70%);
+}
+
+.login-page::after {
+    width: 320px;
+    height: 320px;
+    bottom: -100px;
+    right: -80px;
+    background: radial-gradient(circle, rgba(192,132,252,0.16), transparent 70%);
+    animation-delay: -4.5s;
+}
+
+@keyframes floatBlob {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50%      { transform: translate(20px, -16px) scale(1.06); }
+}
+
+/* extra floating accent shapes — add these as empty <div>s behind the card in Login.jsx */
+.login-shape {
+    position: absolute;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(124,106,247,0.22), rgba(192,132,252,0.10));
+    pointer-events: none;
+    z-index: 0;
+    animation: floatBlob 11s ease-in-out infinite;
+}
+
+.login-shape--1 {
+    width: 90px;
+    height: 90px;
+    top: 14%;
+    right: 12%;
+    animation-delay: -2s;
+}
+
+.login-shape--2 {
+    width: 50px;
+    height: 50px;
+    bottom: 18%;
+    left: 10%;
+    border-radius: 14px;
+    transform: rotate(20deg);
+    animation-delay: -6s;
+}
+
+.login-shape--3 {
+    width: 22px;
+    height: 22px;
+    top: 65%;
+    right: 22%;
+    background: rgba(255,255,255,0.12);
+    animation-delay: -8s;
 }
 
 .login-card {
@@ -24,6 +98,13 @@
     overflow: hidden;
     width: 100%;
     max-width: 440px;
+    position: relative;
+    animation: cardRise 0.5s ease-out;
+}
+
+@keyframes cardRise {
+    from { opacity: 0; transform: translateY(18px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .login-card .card-body {
@@ -40,6 +121,12 @@
     justify-content: center;
     font-size: 28px;
     margin: 0 auto 16px;
+    box-shadow: 0 10px 24px rgba(124,106,247,0.35);
+    transition: transform 0.25s ease;
+}
+
+.login-card:hover .login-logo {
+    transform: scale(1.04) rotate(-2deg);
 }
 
 .login-title {
@@ -60,6 +147,12 @@
     font-size: 13px;
     padding: 10px 14px;
     border: none;
+    animation: alertSlide 0.25s ease-out;
+}
+
+@keyframes alertSlide {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
 .login-alert.alert-danger {
@@ -86,14 +179,16 @@
     border: 1.5px solid #dee2e6;
     padding: 12px 16px;
     font-size: 15px;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
     width: 100%;
+    background: #fbfaff;
 }
 
 .login-input:focus {
     border-color: #7c6af7;
     box-shadow: 0 0 0 3px rgba(124,106,247,0.12);
     outline: none;
+    background: #fff;
 }
 
 .login-input.otp-input {
@@ -102,6 +197,29 @@
     text-align: center;
     font-weight: 700;
     color: #1a1a2e;
+}
+
+/* individual OTP boxes, if your OtpInput renders separate cells */
+.otp-box {
+    width: 48px;
+    height: 56px;
+    text-align: center;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #1a1a2e;
+    border-radius: 10px;
+    border: 1.5px solid #dee2e6;
+    background: #fbfaff;
+    margin: 0 5px;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+}
+
+.otp-box:focus {
+    border-color: #7c6af7;
+    box-shadow: 0 0 0 3px rgba(124,106,247,0.12);
+    outline: none;
+    transform: translateY(-1px);
+    background: #fff;
 }
 
 .input-hint {
@@ -120,19 +238,26 @@
     font-size: 15px;
     padding: 12px;
     width: 100%;
-    transition: opacity 0.2s, transform 0.1s;
+    transition: opacity 0.2s, transform 0.1s, box-shadow 0.2s;
     cursor: pointer;
+    box-shadow: 0 8px 20px rgba(124,106,247,0.3);
 }
 
 .login-btn:hover:not(:disabled) {
-    opacity: 0.92;
+    opacity: 0.95;
     color: white;
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 26px rgba(124,106,247,0.4);
+}
+
+.login-btn:active:not(:disabled) {
+    transform: translateY(0);
 }
 
 .login-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+    transform: none;
 }
 
 .verify-btn {
@@ -144,20 +269,27 @@
     font-size: 15px;
     padding: 12px;
     width: 100%;
-    transition: opacity 0.2s, transform 0.1s;
+    transition: opacity 0.2s, transform 0.1s, box-shadow 0.2s;
     cursor: pointer;
     margin-bottom: 10px;
+    box-shadow: 0 8px 20px rgba(25,135,84,0.3);
 }
 
 .verify-btn:hover:not(:disabled) {
-    opacity: 0.92;
+    opacity: 0.95;
     color: white;
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 26px rgba(25,135,84,0.4);
+}
+
+.verify-btn:active:not(:disabled) {
+    transform: translateY(0);
 }
 
 .verify-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+    transform: none;
 }
 
 .back-btn {
@@ -175,6 +307,7 @@
 .back-btn:hover {
     border-color: #7c6af7;
     color: #7c6af7;
+    background: #faf9ff;
 }
 
 .login-divider {
@@ -221,10 +354,24 @@
     border: 1px solid rgba(124,106,247,0.2);
 }
 
-.success-icon   { font-size: 3.5rem; margin-bottom: 12px; }
+.success-icon   {
+    font-size: 3.5rem;
+    margin-bottom: 12px;
+    animation: popIn 0.4s ease-out;
+}
+
+@keyframes popIn {
+    0%   { transform: scale(0.6); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
 .success-title  { font-size: 20px; font-weight: 700; color: #1a1a2e; }
 .success-sub    { font-size: 14px; color: #6c757d; }
 
+@media (max-width: 480px) {
+    .login-card .card-body { padding: 28px 22px; }
+    .otp-box { width: 40px; height: 48px; font-size: 1.2rem; margin: 0 3px; }
+}
 /* ============================================================
    SECTION 7 — REGISTER PAGE
    ============================================================ */
@@ -2457,4 +2604,55 @@ html, body, #root {
     font-weight: 700;
     margin-bottom: 16px;
     font-size: 0.95rem;
+}
+/* Add this to your App.css or Login.css */
+
+/* ── OTP Boxes ───────────────────────────────────────── */
+.otp-boxes {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 8px;
+}
+
+.otp-box {
+    width: 48px;
+    height: 56px;
+    text-align: center;
+    font-size: 22px;
+    font-weight: 600;
+    border: 1.5px solid #dee2e6;
+    border-radius: 10px;
+    background: #f8f9fa;
+    color: #212529;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    caret-color: transparent;
+}
+
+.otp-box:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+    background: #fff;
+}
+
+.otp-box--filled {
+    border-color: #0d6efd;
+    background: #fff;
+}
+
+.otp-box:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* responsive — tighter on small screens */
+@media (max-width: 400px) {
+    .otp-box {
+        width: 40px;
+        height: 48px;
+        font-size: 18px;
+        gap: 6px;
+    }
+    .otp-boxes { gap: 6px; }
 }

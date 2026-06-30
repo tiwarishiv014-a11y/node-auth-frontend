@@ -19,6 +19,7 @@ A **React-based frontend** for the Node.js Authentication & AI Chat Platform —
 
 - Phone-based OTP login — no password required
 - New users wait for **admin approval** before accessing the app
+- All users land on their **Profile** page after login; admins additionally see a **"Go to Dashboard"** option there
 - JWT tokens stored in `localStorage` for session management
 - Protected routes via `PrivateRoute` component
 - Role-based access — admin-only dashboard
@@ -54,7 +55,7 @@ node-auth-frontend/
 │   │   ├── Dashboard.jsx          # Admin user management page
 │   │   ├── Analytics.jsx          # Admin analytics with charts
 │   │   ├── Insights.jsx           # Admin leaderboard & insights
-│   │   ├── Profile.jsx            # User profile & picture upload
+│   │   ├── Profile.jsx            # User profile, picture upload, admin dashboard link
 │   │   ├── Chat.jsx               # AI chat with voice input/output
 │   │   └── PdfChat.jsx            # PDF RAG chat page
 │   ├── services/
@@ -100,7 +101,7 @@ Frontend runs on `http://localhost:5173`
 | Login | `/` | Public | Phone number OTP login |
 | Login | `/login` | Public | Same as `/` |
 | Register | `/register` | Public | New user registration |
-| Profile | `/profile` | 🔒 Auth | View & update profile, upload picture |
+| Profile | `/profile` | 🔒 Auth | View & update profile, upload picture — first page for every user after login; admins see a link to `/dashboard` here |
 | Dashboard | `/dashboard` | 🔒 Admin | User management, logs, ban/unban |
 | Analytics | `/analytics` | 🔒 Admin | Charts — status, roles, registrations, top users |
 | Insights | `/insights` | 🔒 Admin | Leaderboard, top 3 medals, activity stats |
@@ -145,6 +146,7 @@ Frontend runs on `http://localhost:5173`
 
 - Not logged in → redirected to `/login`
 - Not admin → access denied to `/dashboard`, `/analytics`, `/insights`
+- Admin status doesn't trigger an automatic redirect after login — every user (including admins) lands on `/profile`; admins see an extra in-page link to `/dashboard`
 
 ---
 
@@ -238,9 +240,11 @@ MongoDB    Sarvam AI   Groq AI        JWT Auth
 2. Backend sends OTP
 3. User enters OTP → receives JWT access + refresh token
 4. Tokens stored in localStorage
-5. PrivateRoute checks token on every protected page
-6. Token sent as Bearer in every API request header
-7. On expiry → refresh token used to get new access token
+5. All users (user or admin) are navigated to /profile — there is no role-based redirect at login
+6. On /profile, admin users see an additional "Go to Dashboard" link/button to access /dashboard
+7. PrivateRoute checks token on every protected page
+8. Token sent as Bearer in every API request header
+9. On expiry → refresh token used to get new access token
 ```
 
 ---

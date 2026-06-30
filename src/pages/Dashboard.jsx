@@ -202,11 +202,12 @@ export default function Dashboard() {
 
   return (
     <div className="dash-root">
-      <Sidebar
+      {/* <Sidebar
         activeSection={activeSection}
         setActiveSection={setActiveSection}
         handleLogout={handleLogout}
-      />
+      /> */}
+      <Sidebar handleLogout={handleLogout} />
 
       <main className="dash-main">
         <header className="dash-topbar">

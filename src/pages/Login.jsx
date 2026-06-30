@@ -1,9 +1,8 @@
-// src/pages/Login.jsx
+// src/pages/Login.jsx  — full file with OtpInput integrated
 import { useState } from 'react';
 import { loginUser, verifyOtp } from '../services/api';
 import { Link, useNavigate } from 'react-router-dom';
-// import './Login.css';
-// import '../App.css'
+import OtpInput from '../components/OtpInput';   // ← import
 
 function Login() {
     const [phone,   setPhone]   = useState('');
@@ -24,7 +23,8 @@ function Login() {
         setError('');
         try {
             const data = await loginUser(phone);
-            console.log('Login response:', data); // ✅ Add back
+            // console.log('Dev OTP:', data.otp); // ← add this line
+            console.log('Full response:', data);
             if (data.status === 'otp_sent') {
                 setDevOtp(data.otp || '');
                 setStep('otp');
@@ -45,26 +45,22 @@ function Login() {
     // ── STEP 2 — Verify OTP ───────────────────────────────
     const verifyOtpHandler = async () => {
         if (!otp || otp.length !== 6) {
-            setError('Enter a valid 6 digit OTP');
+            setError('Enter all 6 digits');
             return;
         }
         setLoading(true);
         setError('');
         try {
             const data = await verifyOtp(phone, otp);
-            // ✅ Add these back
-        console.log('1. Full data:', data);
-        console.log('2. accessToken:', data.accessToken);
-        console.log('3. user:', data.user);
             if (data.accessToken) {
                 localStorage.setItem('token', data.accessToken);
                 localStorage.setItem('role',  data.user.role);
                 localStorage.setItem('phone', data.user.phone);
-                console.log('Saved role:', localStorage.getItem('role')); // ✅ Add back
-                if (data.user.role === 'admin') navigate('/dashboard');
-                else navigate('/profile');
+                // if (data.user.role === 'admin') navigate('/dashboard');
+                // else
+                     navigate('/profile');
             } else {
-                setError(data.error || 'Invalid OTP');
+                setError(data.error || 'Invalid OTP. Try again.');
             }
         } catch {
             setError('Cannot reach server.');
@@ -73,10 +69,13 @@ function Login() {
         }
     };
 
-    const handleKeyDown = (e, action) => { if (e.key === 'Enter') action(); };
+    const handlePhoneKey = (e) => { if (e.key === 'Enter') sendOtp(); };
 
     return (
         <div className="login-page">
+            <div className="login-shape login-shape--1" />
+<div className="login-shape login-shape--2" />
+<div className="login-shape login-shape--3" />
             <div className="login-card card">
                 <div className="card-body">
 
@@ -94,7 +93,7 @@ function Login() {
                         </div>
                     )}
 
-                    {/* ── Dev OTP (uncomment to show) ── */}
+                    {/* ── Dev OTP hint (dev only) ── */}
                     {/* {devOtp && (
                         <div className="login-alert alert-info mb-3">
                             <i className="bi bi-info-circle me-2" />
@@ -113,8 +112,8 @@ function Login() {
                                     className="login-input"
                                     type="tel"
                                     value={phone}
-                                    onChange={(e) => setPhone(e.target.value)}
-                                    onKeyDown={(e) => handleKeyDown(e, sendOtp)}
+                                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                                    onKeyDown={handlePhoneKey}
                                     placeholder="Enter 10 digit phone"
                                     maxLength={10}
                                     autoFocus
@@ -141,31 +140,33 @@ function Login() {
                     {/* ── STEP 2 — OTP ── */}
                     {step === 'otp' && (
                         <div>
-                            <div className="otp-sent-info">
+                            <div className="otp-sent-info mb-3">
                                 <i className="bi bi-check-circle me-2" />
                                 OTP sent to <strong>{phone}</strong>
                             </div>
 
                             <div className="mb-4">
-                                <label className="login-label">
+                                <label className="login-label text-center d-block mb-3">
                                     <i className="bi bi-shield-lock me-1" />Enter OTP
                                 </label>
-                                <input
-                                    className="login-input otp-input"
-                                    type="text"
+
+                                {/* ✅ NEW: 6-box OTP input */}
+                                <OtpInput
                                     value={otp}
-                                    onChange={(e) => setOtp(e.target.value)}
-                                    onKeyDown={(e) => handleKeyDown(e, verifyOtpHandler)}
-                                    placeholder="000000"
-                                    maxLength={6}
-                                    autoFocus
+                                    onChange={setOtp}
+                                    disabled={loading}
                                 />
-                                <p className="input-hint">
+
+                                <p className="input-hint text-center mt-2">
                                     <i className="bi bi-clock me-1" />OTP expires in 10 minutes
                                 </p>
                             </div>
 
-                            <button className="verify-btn btn" onClick={verifyOtpHandler} disabled={loading}>
+                            <button
+                                className="verify-btn btn"
+                                onClick={verifyOtpHandler}
+                                disabled={loading || otp.length < 6}
+                            >
                                 {loading ? (
                                     <><span className="spinner-border spinner-border-sm me-2" />Verifying...</>
                                 ) : (
@@ -173,7 +174,11 @@ function Login() {
                                 )}
                             </button>
 
-                            <button className="back-btn btn" onClick={() => { setStep('phone'); setOtp(''); setError(''); setDevOtp(''); }}>
+                            <button
+                                className="back-btn btn"
+                                onClick={() => { setStep('phone'); setOtp(''); setError(''); setDevOtp(''); }}
+                                disabled={loading}
+                            >
                                 <i className="bi bi-arrow-left me-2" />Change Phone Number
                             </button>
                         </div>
@@ -187,19 +192,12 @@ function Login() {
                             <p className="success-sub">
                                 Welcome back <strong>{localStorage.getItem('phone')}</strong>
                             </p>
-                            <span className={`badge bg-${localStorage.getItem('role') === 'admin' ? 'danger' : 'primary'} mb-3`}>
-                                {localStorage.getItem('role')}
-                            </span>
-                            <p className="text-muted" style={{ fontSize:13 }}>
-                                {localStorage.getItem('role') === 'admin'
-                                    ? '→ Redirecting to Dashboard...'
-                                    : '→ Redirecting to Profile...'}
-                            </p>
                         </div>
                     )}
 
                 </div>
             </div>
+
         </div>
     );
 }
